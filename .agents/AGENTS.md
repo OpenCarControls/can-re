@@ -18,6 +18,11 @@ These rules guide any AI agent working within the OpenCarControls CAN RE workspa
   - You must use Dart conditional imports (`if (dart.library.html) ...` or `if (dart.library.io) ...`) to build factories that select the appropriate hardware driver at compile-time.
 
 ## Code Conventions
-- Document public APIs using standard Dart doc comments `///`.
-- Write clean, declarative Flutter code.
 - Prefer Riverpod `ConsumerWidget` or `ConsumerStatefulWidget` over `Consumer` builders where appropriate for entire screens.
+
+## Data Processing
+- **Timestamps (CRITICAL)**: Assume CAN timestamps (e.g. from SavvyCAN CSVs or hardware adapters) are relative microsecond counters since the device booted or the log started. Do **not** attempt to parse large numeric timestamps as absolute Unix Epoch dates (unless explicitly specified), as this leads to integer overflow and massive timeline distortion. Format them as relative duration (`HH:mm:ss.SSS`).
+
+## UI Architecture
+- **Responsive Dashboard**: Use a `LayoutBuilder` to adapt between desktop (persistent right sidebar, >800px) and mobile (`EndDrawer`).
+- **Data Tables**: Use flexible widths (`Expanded` inside a `Row`) wrapped in a horizontal `SingleChildScrollView` with a minimum width to prevent columns from being squished into oblivion on narrow screens.

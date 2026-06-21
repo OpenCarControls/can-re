@@ -11,7 +11,9 @@ A modern, high-performance, cross-platform CAN (Controller Area Network) reverse
   - **Network**: TCP/UDP and WebSocket support.
   - **SocketCAN**: Direct integration for Linux environments.
 - **Rich Aesthetics**: A premium, responsive interface optimized for visualizing high-speed data streams.
-
+- **High-Performance Data Grid**: Virtualized lists capable of parsing and rendering millions of frames instantly without blocking the UI thread.
+- **Responsive Dashboard**: Scalable Flex layout with a permanent sidebar on Desktop, gracefully degrading to an `EndDrawer` on Mobile. Features toggleable columns and horizontal scroll protection.
+- **"Twitch-Style" Live Scrolling**: Automatically locks your visual position when scrolling up to analyze past frames, without being forcefully interrupted by incoming live data.
 ## Getting Started
 
 This project is built using [Flutter](https://flutter.dev/).
