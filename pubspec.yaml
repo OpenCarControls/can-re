@@ -43,7 +43,7 @@ dependencies:
   serial: ^0.0.7+1
   web_socket_channel: ^3.0.3
   linux_can: ^0.2.0
-
+  shared_preferences: ^2.5.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
