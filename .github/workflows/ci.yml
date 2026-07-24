@@ -83,7 +83,7 @@ jobs:
           ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
 
@@ -132,7 +132,7 @@ jobs:
           ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
 
