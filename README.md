@@ -1,39 +1,50 @@
-# OpenCarControls - CAN RE
+# CAN AI Debugger
 
-A modern, high-performance, cross-platform CAN (Controller Area Network) reverse engineering tool, built with Flutter. Inspired by SavvyCAN, but designed from the ground up for cross-platform support and a rich, modern user interface.
+CAN AI Debugger is a modern, web-technology-based UI for analyzing and interacting with CAN bus networks. It shares a single React codebase that operates in two environments:
 
-## Features
+- **Desktop Mode (Pro)**: A native OS executable wrapping a local Python backend (via PyWebView). It handles live hardware (SocketCAN), runs the MCP Server for AI integration, and natively loads Python plugins from the file system.
+- **Web Mode (Lite)**: A zero-install website hosted on GitHub Pages. It runs a sandboxed WASM Python environment (via Pyodide) to parse static logs dragged and dropped by the user.
 
-- **Cross-Platform**: Runs natively on Desktop (Windows, macOS, Linux), Mobile (Android, iOS), and Web (PWA).
-- **Multiple Protocols**: Seamlessly connects to different CAN interfaces:
-  - **CSV Logs**: Read and analyze captured CAN data.
-  - **Serial**: Standard serial port communication for hardware adapters (uses Web Serial API on Web, native libserialport on desktop).
-  - **Network**: TCP/UDP and WebSocket support.
-  - **SocketCAN**: Direct integration for Linux environments.
-- **Rich Aesthetics**: A premium, responsive interface optimized for visualizing high-speed data streams.
-- **High-Performance Data Grid**: Virtualized lists capable of parsing and rendering millions of frames instantly without blocking the UI thread.
-- **Responsive Dashboard**: Scalable Flex layout with a permanent sidebar on Desktop, gracefully degrading to an `EndDrawer` on Mobile. Features toggleable columns and horizontal scroll protection.
-- **"Twitch-Style" Live Scrolling**: Automatically locks your visual position when scrolling up to analyze past frames, without being forcefully interrupted by incoming live data.
-## Getting Started
+## Development Setup
 
-This project is built using [Flutter](https://flutter.dev/).
+This project requires Node.js (for the frontend) and `uv` (for the Python backend). Both are pre-configured if using the provided Dev Container.
 
-### Prerequisites
+### 1. Start the Frontend Server
 
-- Flutter SDK (latest stable)
-- For Linux SocketCAN support: ensure `libsocketcan` is available.
-- For Desktop serial support: `libserialport` is bundled via FFI, but ensure appropriate permissions on your platform.
-
-### Running the App
+The frontend is built with React and Vite. Start the Vite development server first:
 
 ```bash
-# Get dependencies
-flutter pub get
+cd frontend
+npm install
 
-# Run on your current platform
-flutter run
+# Build the python backend wheel for Pyodide (Web Mode)
+npm run build:py
+
+# Start the Vite development server
+npm run dev
 ```
 
-## Architecture
+The React UI will run at `http://localhost:5173`. 
+*(Note: Opening this URL directly in your browser will trigger Web Mode using Pyodide).*
 
-This project strictly separates hardware/connection specifics from the core UI via a **Connection Abstraction Layer**. Platform-specific implementations (like Web vs Desktop serial) are resolved at compile-time using Dart's conditional imports to ensure maximum portability without compilation errors.
+### 2. Start the Desktop App (PyWebView)
+
+To test the Desktop integration, the Python backend opens a native window pointing to your local Vite server (`localhost:5173`).
+
+Open a new terminal and run:
+
+```bash
+cd backend
+
+# Install dependencies, including desktop extras (pywebview, pyinstaller)
+uv sync --extra desktop
+
+# Launch the desktop app
+uv run can-debug
+```
+
+The desktop window will open, and the React UI will detect the native environment and initialize in **Desktop Mode**.
+
+### FastMCP Server
+
+The project includes an MCP (Model Context Protocol) server for AI integrations, located at `backend/src/can_debug/mcp_server.py`.

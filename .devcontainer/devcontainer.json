@@ -1,0 +1,33 @@
+{
+	"name": "CAN Reverse Engineering",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "24"
+		},
+		"ghcr.io/devcontainer-community/devcontainer-features/astral.sh-uv:1": {
+			"version": "latest"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"charliermarsh.ruff",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode"
+			]
+		}
+	},
+	"updateContentCommand": "uv python install 3.14; if [ -f backend/pyproject.toml ]; then cd backend && uv sync; fi; if [ -f frontend/package.json ]; then cd frontend && npm install; fi",
+	"runArgs": [
+		"-e", "DISPLAY=${env:DISPLAY}",
+		"-e", "WAYLAND_DISPLAY=${env:WAYLAND_DISPLAY}",
+		"-v", "/tmp/.X11-unix:/tmp/.X11-unix",
+		"-v", "${env:XDG_RUNTIME_DIR}/${env:WAYLAND_DISPLAY}:/tmp/${env:WAYLAND_DISPLAY}",
+		"-e", "XDG_RUNTIME_DIR=/tmp"
+	],
+	"remoteUser": "vscode"
+}

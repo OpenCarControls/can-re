@@ -1,0 +1,25 @@
+[project]
+name = "can_debug"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cantools>=42.0.3",
+    "python-can>=4.6.1",
+]
+
+[project.optional-dependencies]
+desktop = [
+    "mcp>=1.28.1",
+    "pygobject>=3.56.3",
+    "pyinstaller>=6.21.0",
+    "pywebview>=6.2.1",
+]
+
+[project.scripts]
+can-debug = "can_debug.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
