@@ -1,12 +1,14 @@
-name: Build and Deploy
+name: CI/CD
 
 on:
   push:
-    tags: ["v*.*.*"]
+    branches:
+      - main
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read
+  contents: write
+  issues: write
+  pull-requests: write
   pages: write
   id-token: write
 
@@ -15,14 +17,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-frontend:
+    needs: [release]
+    if: needs.release.outputs.new_release_published == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Extract version
-        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+        run: echo "APP_VERSION=${{ needs.release.outputs.new_release_version }}" >> $GITHUB_ENV
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -42,7 +71,7 @@ jobs:
           path: ./frontend/dist
 
   deploy-web:
-    needs: [build-frontend]
+    needs: [release, build-frontend]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -50,6 +79,8 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v9
@@ -81,18 +112,32 @@ jobs:
         uses: actions/deploy-pages@v5
 
   build-desktop:
-    needs: [build-frontend]
-    runs-on: ubuntu-24.04
+    needs: [release, build-frontend]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: Linux
+            archive: can-re-linux.tar.gz
+            sep: ":"
+          - os: windows-latest
+            name: Windows
+            archive: can-re-windows.zip
+            sep: ";"
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v9
         with:
           version: "latest"
 
-      - name: Install System Dependencies for PyWebView
+      - name: Install System Dependencies for PyWebView (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.1
@@ -108,10 +153,28 @@ jobs:
         run: |
           uv sync --extra desktop
           # We run pyinstaller through uv
-          uv run pyinstaller --noconfirm --onedir --windowed --add-data "../frontend-dist:dist" src/can_debug/main.py
+          uv run pyinstaller --noconfirm --onedir --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_debug/main.py
+
+      - name: Archive Desktop App (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ./backend/dist
+        run: tar -czvf ${{ matrix.archive }} main/
+
+      - name: Archive Desktop App (Windows)
+        if: runner.os == 'Windows'
+        working-directory: ./backend/dist
+        run: Compress-Archive -Path main\* -DestinationPath ${{ matrix.archive }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.release.outputs.new_release_version }}
+          files: backend/dist/${{ matrix.archive }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: CAN-AI-Debugger-Linux
+          name: can-re-${{ matrix.name }}
           path: backend/dist/main/
