@@ -172,7 +172,7 @@ jobs:
           echo 'Icon=can-re' >> can-re.AppDir/can-re.desktop
           echo 'Type=Application' >> can-re.AppDir/can-re.desktop
           echo 'Categories=Utility;' >> can-re.AppDir/can-re.desktop
-          touch can-re.AppDir/can-re.png
+          cp ../../frontend/public/favicon.svg can-re.AppDir/can-re.svg
           wget -q https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
           ./appimagetool-x86_64.AppImage --appimage-extract-and-run can-re.AppDir can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.AppImage
