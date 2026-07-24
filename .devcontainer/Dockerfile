@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 # Install PyWebView OS dependencies for Linux
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
-    libgirepository1.0-dev \
+    libgirepository-2.0-dev \
     gcc \
     libcairo2-dev \
     pkg-config \
