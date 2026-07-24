@@ -38,7 +38,7 @@ def main():
     entry = get_entrypoint()
     
     if webview:
-        title = f"CAN AI Debugger{get_version_string()}"
+        title = f"CAN RE{get_version_string()}"
         # create_window exposes the 'api' object as window.pywebview.api in JavaScript
         window = webview.create_window(title, entry, js_api=api)
         webview.start(debug=True)

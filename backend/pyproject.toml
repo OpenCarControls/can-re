@@ -1,5 +1,5 @@
 [project]
-name = "can_debug"
+name = "can_re"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -12,13 +12,15 @@ dependencies = [
 [project.optional-dependencies]
 desktop = [
     "mcp>=1.28.1",
-    "pygobject>=3.56.3; sys_platform == 'linux'",
+    "pyqt6>=6.7.1; sys_platform == 'linux'",
+    "pyqt6-webengine>=6.7.0; sys_platform == 'linux'",
+    "qtpy>=2.4.1; sys_platform == 'linux'",
     "pyinstaller>=6.21.0",
     "pywebview>=6.2.1",
 ]
 
 [project.scripts]
-can-debug = "can_debug.main:main"
+can-re = "can_re.main:main"
 
 [build-system]
 requires = ["hatchling"]

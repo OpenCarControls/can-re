@@ -58,7 +58,7 @@ function App() {
         }
         return;
       }
-      
+
       setStatus('Waiting for pywebview or pyodide...')
     }
 
@@ -77,7 +77,7 @@ function App() {
     } else if (pyodide) {
       try {
         const response = await pyodide.runPythonAsync(`
-from can_debug.main import Api
+from can_re.main import Api
 api = Api()
 api.hello_from_python("Hello from React! (Web Mode)")
         `);
@@ -94,7 +94,7 @@ api.hello_from_python("Hello from React! (Web Mode)")
     <Container maxWidth="sm" sx={{ mt: 5 }}>
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
         <Typography variant="h4" gutterBottom>
-          CAN AI Debugger
+          CAN RE
         </Typography>
         <Box sx={{ my: 3 }}>
           {status === 'Initializing...' || status.includes('Loading') ? (
@@ -104,10 +104,10 @@ api.hello_from_python("Hello from React! (Web Mode)")
             {status}
           </Typography>
         </Box>
-        
-        <Button 
-          variant="contained" 
-          color="primary" 
+
+        <Button
+          variant="contained"
+          color="primary"
           onClick={handleTestBridge}
           disabled={!isDesktop && !status.includes('Loaded')}
         >
@@ -120,10 +120,10 @@ api.hello_from_python("Hello from React! (Web Mode)")
           </Typography>
         )}
       </Paper>
-      
+
       {versionInfo && (
-        <Typography 
-          variant="caption" 
+        <Typography
+          variant="caption"
           sx={{ position: 'fixed', bottom: 8, right: 16, color: 'text.disabled' }}
         >
           v{versionInfo.version} ({versionInfo.hash})

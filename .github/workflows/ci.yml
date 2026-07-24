@@ -100,7 +100,7 @@ jobs:
         run: |
           bash scripts/build_py.sh
           mkdir -p ./frontend-dist/wheels
-          cp frontend/public/wheels/*.whl ./frontend-dist/wheels/
+          cp frontend/public/wheels/* ./frontend-dist/wheels/
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
@@ -120,15 +120,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            name: Linux
-            ext: tar.gz
+            name: linux
+            ext: AppImage
             sep: ":"
-            pyinstaller_args: "--hidden-import gi.repository.Gtk --hidden-import gi.repository.WebKit2"
+            pyinstaller_args: "--onedir"
           - os: windows-latest
-            name: Windows
-            ext: zip
+            name: windows
+            ext: exe
             sep: ";"
-            pyinstaller_args: ""
+            pyinstaller_args: "--onefile"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -141,11 +141,7 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install System Dependencies for PyWebView (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgirepository-2.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v8
@@ -158,28 +154,45 @@ jobs:
         run: |
           uv sync --extra desktop
           # We run pyinstaller through uv
-          uv run pyinstaller --name can-debug --noconfirm --onedir --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" ${{ matrix.pyinstaller_args }} src/can_debug/main.py
+          uv run pyinstaller --name can-re --noconfirm ${{ matrix.pyinstaller_args }} --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_re/main.py
 
-      - name: Archive Desktop App (Linux)
+      - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
         working-directory: ./backend/dist
-        run: tar -czvf can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }} can-debug/
+        run: |
+          mkdir -p can-re.AppDir/usr/bin
+          cp -r can-re/* can-re.AppDir/
+          echo '#!/bin/sh' > can-re.AppDir/AppRun
+          echo 'HERE="$(dirname "$(readlink -f "${0}")")"' >> can-re.AppDir/AppRun
+          echo 'exec "${HERE}/can-re" "$@"' >> can-re.AppDir/AppRun
+          chmod +x can-re.AppDir/AppRun
+          echo '[Desktop Entry]' > can-re.AppDir/can-re.desktop
+          echo 'Name=can-re' >> can-re.AppDir/can-re.desktop
+          echo 'Exec=can-re' >> can-re.AppDir/can-re.desktop
+          echo 'Icon=can-re' >> can-re.AppDir/can-re.desktop
+          echo 'Type=Application' >> can-re.AppDir/can-re.desktop
+          echo 'Categories=Utility;' >> can-re.AppDir/can-re.desktop
+          touch can-re.AppDir/can-re.png
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage --appimage-extract-and-run can-re.AppDir can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.AppImage
 
-      - name: Archive Desktop App (Windows)
+      - name: Prepare Executable (Windows)
         if: runner.os == 'Windows'
         working-directory: ./backend/dist
-        run: Compress-Archive -Path can-debug\* -DestinationPath can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}
+        run: |
+          Rename-Item -Path can-re.exe -NewName can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.exe
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.release.outputs.new_release_version }}
-          files: backend/dist/can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}
+          files: backend/dist/can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: can-debug-${{ matrix.name }}
-          path: backend/dist/can-debug/
+          name: can-re-${{ matrix.name }}
+          path: backend/dist/can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}

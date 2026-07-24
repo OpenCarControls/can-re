@@ -11,7 +11,7 @@ def get_can_status() -> str:
 @mcp.tool()
 def hello_world() -> str:
     """A simple hello world tool."""
-    return "Hello from CAN AI Debugger MCP Server!"
+    return "Hello from CAN RE MCP Server!"
 
 if __name__ == "__main__":
     # In desktop mode, we might run this in a separate thread or process

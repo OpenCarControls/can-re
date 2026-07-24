@@ -1,6 +1,6 @@
-# CAN AI Debugger
+# CAN Reverse Engineering app
 
-CAN AI Debugger is a modern, web-technology-based UI for analyzing and interacting with CAN bus networks. It shares a single React codebase that operates in two environments:
+CAN RE is a modern, web-technology-based UI for analyzing and interacting with CAN bus networks. It shares a single React codebase that operates in two environments:
 
 - **Desktop Mode (Pro)**: A native OS executable wrapping a local Python backend (via PyWebView). It handles live hardware (SocketCAN), runs the MCP Server for AI integration, and natively loads Python plugins from the file system.
 - **Web Mode (Lite)**: A zero-install website hosted on GitHub Pages. It runs a sandboxed WASM Python environment (via Pyodide) to parse static logs dragged and dropped by the user.
@@ -40,11 +40,11 @@ cd backend
 uv sync --extra desktop
 
 # Launch the desktop app
-uv run can-debug
+uv run can-re
 ```
 
 The desktop window will open, and the React UI will detect the native environment and initialize in **Desktop Mode**.
 
 ### FastMCP Server
 
-The project includes an MCP (Model Context Protocol) server for AI integrations, located at `backend/src/can_debug/mcp_server.py`.
+The project includes an MCP (Model Context Protocol) server for AI integrations, located at `backend/src/can_re/mcp_server.py`.
