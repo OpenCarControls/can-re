@@ -41,7 +41,8 @@ def main():
         title = f"CAN RE{get_version_string()}"
         # create_window exposes the 'api' object as window.pywebview.api in JavaScript
         window = webview.create_window(title, entry, js_api=api)
-        webview.start(debug=True)
+        is_dev = not getattr(sys, 'frozen', False)
+        webview.start(debug=is_dev)
 
 if __name__ == '__main__':
     main()
