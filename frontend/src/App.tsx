@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Button, Container, Typography, Paper, CircularProgress, Box } from '@mui/material'
 
+interface VersionInfo {
+  version: string;
+  hash: string;
+}
+
 declare global {
   interface Window {
     pywebview?: any;
@@ -13,8 +18,19 @@ function App() {
   const [isDesktop, setIsDesktop] = useState<boolean>(false)
   const [pyResponse, setPyResponse] = useState<string>('')
   const [pyodide, setPyodide] = useState<any>(null)
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null)
 
   useEffect(() => {
+    fetch('./version.json')
+      .then(res => res.json())
+      .then(data => {
+        setVersionInfo(data);
+        document.title = `CAN-RE v${data.version} (${data.hash})`;
+      })
+      .catch(() => {
+        document.title = 'CAN-RE (dev)';
+      });
+
     const init = async () => {
       // Check for PyWebView (Desktop Mode)
       if (window.pywebview) {
@@ -31,7 +47,7 @@ function App() {
           const loadedPyodide = await window.loadPyodide();
           await loadedPyodide.loadPackage("micropip");
           const micropip = loadedPyodide.pyimport("micropip");
-          const wheelsReq = await fetch('/wheels/wheels.json');
+          const wheelsReq = await fetch('./wheels/wheels.json');
           const wheelsList = await wheelsReq.json();
           await micropip.install(wheelsList);
           setPyodide(loadedPyodide);
@@ -104,6 +120,15 @@ api.hello_from_python("Hello from React! (Web Mode)")
           </Typography>
         )}
       </Paper>
+      
+      {versionInfo && (
+        <Typography 
+          variant="caption" 
+          sx={{ position: 'fixed', bottom: 8, right: 16, color: 'text.disabled' }}
+        >
+          v{versionInfo.version} ({versionInfo.hash})
+        </Typography>
+      )}
     </Container>
   )
 }

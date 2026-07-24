@@ -12,7 +12,7 @@ dependencies = [
 [project.optional-dependencies]
 desktop = [
     "mcp>=1.28.1",
-    "pygobject>=3.56.3",
+    "pygobject>=3.56.3; sys_platform == 'linux'",
     "pyinstaller>=6.21.0",
     "pywebview>=6.2.1",
 ]

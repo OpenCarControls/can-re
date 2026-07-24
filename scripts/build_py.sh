@@ -23,6 +23,6 @@ mv ../frontend/public/wheels/bitstruct-8.19.0-*.whl ../frontend/public/wheels/bi
 echo "Generating wheels.json manifest..."
 cd ../frontend/public/wheels
 # Create a JSON array of all wheel paths
-node -e 'console.log(JSON.stringify(require("fs").readdirSync(".").filter(f => f.endsWith(".whl")).map(f => "/wheels/" + f)))' > wheels.json
+node -e 'console.log(JSON.stringify(require("fs").readdirSync(".").filter(f => f.endsWith(".whl")).map(f => "./wheels/" + f)))' > wheels.json
 
 echo "Done!"

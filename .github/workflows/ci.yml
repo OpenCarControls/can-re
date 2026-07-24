@@ -36,7 +36,7 @@ jobs:
 
       - name: Semantic Release
         id: semantic
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -51,7 +51,10 @@ jobs:
           ref: v${{ needs.release.outputs.new_release_version }}
 
       - name: Extract version
-        run: echo "APP_VERSION=${{ needs.release.outputs.new_release_version }}" >> $GITHUB_ENV
+        run: |
+          echo "APP_VERSION=${{ needs.release.outputs.new_release_version }}" >> $GITHUB_ENV
+          mkdir -p ./frontend/public
+          echo "{\"version\": \"${{ needs.release.outputs.new_release_version }}\", \"hash\": \"$(git rev-parse --short HEAD)\"}" > ./frontend/public/version.json
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -118,12 +121,14 @@ jobs:
         include:
           - os: ubuntu-24.04
             name: Linux
-            archive: can-re-linux.tar.gz
+            ext: tar.gz
             sep: ":"
+            pyinstaller_args: "--hidden-import gi.repository.Gtk --hidden-import gi.repository.WebKit2"
           - os: windows-latest
             name: Windows
-            archive: can-re-windows.zip
+            ext: zip
             sep: ";"
+            pyinstaller_args: ""
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -153,28 +158,28 @@ jobs:
         run: |
           uv sync --extra desktop
           # We run pyinstaller through uv
-          uv run pyinstaller --noconfirm --onedir --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_debug/main.py
+          uv run pyinstaller --name can-debug --noconfirm --onedir --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" ${{ matrix.pyinstaller_args }} src/can_debug/main.py
 
       - name: Archive Desktop App (Linux)
         if: runner.os == 'Linux'
         working-directory: ./backend/dist
-        run: tar -czvf ${{ matrix.archive }} main/
+        run: tar -czvf can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }} can-debug/
 
       - name: Archive Desktop App (Windows)
         if: runner.os == 'Windows'
         working-directory: ./backend/dist
-        run: Compress-Archive -Path main\* -DestinationPath ${{ matrix.archive }}
+        run: Compress-Archive -Path can-debug\* -DestinationPath can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.release.outputs.new_release_version }}
-          files: backend/dist/${{ matrix.archive }}
+          files: backend/dist/can-debug-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.${{ matrix.ext }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: can-re-${{ matrix.name }}
-          path: backend/dist/main/
+          name: can-debug-${{ matrix.name }}
+          path: backend/dist/can-debug/

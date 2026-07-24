@@ -4,6 +4,7 @@ try:
 except ImportError:
     webview = None
 import os
+import json
 from pathlib import Path
 
 class Api:
@@ -21,13 +22,25 @@ def get_entrypoint():
         # Development mode (Vite default port)
         return "http://localhost:5173"
 
+def get_version_string():
+    if getattr(sys, 'frozen', False):
+        try:
+            base_path = Path(sys._MEIPASS)
+            with open(base_path / "dist" / "version.json", "r") as f:
+                data = json.load(f)
+                return f" - v{data.get('version', '?')} ({data.get('hash', '?')})"
+        except Exception:
+            pass
+    return ""
+
 def main():
     api = Api()
     entry = get_entrypoint()
     
     if webview:
+        title = f"CAN AI Debugger{get_version_string()}"
         # create_window exposes the 'api' object as window.pywebview.api in JavaScript
-        window = webview.create_window('CAN AI Debugger', entry, js_api=api)
+        window = webview.create_window(title, entry, js_api=api)
         webview.start(debug=True)
 
 if __name__ == '__main__':
