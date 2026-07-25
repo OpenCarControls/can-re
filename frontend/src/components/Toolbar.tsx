@@ -1,4 +1,4 @@
-import { Box, Button, Typography } from '@mui/material';
+import { AppBar, Toolbar as MuiToolbar, Button, Typography } from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import StorageIcon from '@mui/icons-material/Storage';
 import { getApi, getMode } from '../api';
@@ -79,31 +79,33 @@ export const Toolbar = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', p: 1, gap: 2 }}>
-      <input type="file" ref={dbcInputRef} style={{ display: 'none' }} accept=".dbc" onChange={(e) => onWebFileChange(e, 'dbc')} />
-      <input type="file" ref={logInputRef} style={{ display: 'none' }} accept=".asc,.blf,.csv,.trc" onChange={(e) => onWebFileChange(e, 'log')} />
-      
-      <Button 
-        variant="text" 
-        size="small" 
-        startIcon={<FolderOpenIcon />}
-        onClick={handleDbcLoad}
-        sx={{ color: 'text.secondary' }}
-      >
-        Load DBC
-      </Button>
-      {dbcName && <Typography variant="caption" color="primary">{dbcName}</Typography>}
+    <AppBar position="static" color="transparent" elevation={0} sx={{ height: 48, justifyContent: 'center' }}>
+      <MuiToolbar variant="dense" sx={{ gap: 2 }}>
+        <input type="file" ref={dbcInputRef} style={{ display: 'none' }} accept=".dbc" onChange={(e) => onWebFileChange(e, 'dbc')} />
+        <input type="file" ref={logInputRef} style={{ display: 'none' }} accept=".asc,.blf,.csv,.trc" onChange={(e) => onWebFileChange(e, 'log')} />
+        
+        <Button 
+          variant="text" 
+          size="small" 
+          startIcon={<FolderOpenIcon />}
+          onClick={handleDbcLoad}
+          sx={{ color: 'text.secondary' }}
+        >
+          Load DBC
+        </Button>
+        {dbcName && <Typography variant="caption" color="primary">{dbcName}</Typography>}
 
-      <Button 
-        variant="text" 
-        size="small" 
-        startIcon={<StorageIcon />}
-        onClick={handleLogLoad}
-        sx={{ color: 'text.secondary' }}
-      >
-        Load Log
-      </Button>
-      {logName && <Typography variant="caption" color="primary">{logName}</Typography>}
-    </Box>
+        <Button 
+          variant="text" 
+          size="small" 
+          startIcon={<StorageIcon />}
+          onClick={handleLogLoad}
+          sx={{ color: 'text.secondary' }}
+        >
+          Load Log
+        </Button>
+        {logName && <Typography variant="caption" color="primary">{logName}</Typography>}
+      </MuiToolbar>
+    </AppBar>
   );
 };

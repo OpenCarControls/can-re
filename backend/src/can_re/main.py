@@ -53,18 +53,48 @@ class Api:
             traceback.print_exc()
             return {"error": str(e)}
 
+    def _parse_log_file(self, file_path: str):
+        try:
+            reader = can.LogReader(file_path)
+            return list(reader)
+        except ValueError as e:
+            if "too many values to unpack" in str(e) and file_path.lower().endswith('.csv'):
+                # Fallback for SavvyCAN Generic CSV
+                messages = []
+                import csv
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    header = next(reader, None)
+                    if header and header[0] == 'Time Stamp':
+                        for row in reader:
+                            if len(row) < 6:
+                                continue
+                            dlc = int(row[5])
+                            data = [int(x, 16) for x in row[6:6+dlc]]
+                            msg = can.Message(
+                                timestamp=float(row[0]) / 1000000.0,
+                                arbitration_id=int(row[1], 16),
+                                is_extended_id=(row[2].lower() == 'true'),
+                                is_rx=(row[3].lower() == 'rx'),
+                                channel=row[4],
+                                dlc=dlc,
+                                data=data
+                            )
+                            messages.append(msg)
+                        return messages
+            raise e
+
     def prompt_load_log(self):
         window = self.get_window()
         if not window:
             return {"error": "Native dialogs not supported in this mode"}
         
-        file_types = ('CAN Logs (*.asc *.blf *.csv *.trc)', 'All files (*.*)')
+        file_types = ('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)')
         result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
         if result and len(result) > 0:
             file_path = result[0]
             try:
-                reader = can.LogReader(file_path)
-                self.log_messages = list(reader)
+                self.log_messages = self._parse_log_file(file_path)
                 return {"success": True, "file": os.path.basename(file_path), "total_count": len(self.log_messages)}
             except Exception as e:
                 traceback.print_exc()
@@ -81,8 +111,7 @@ class Api:
             with open(tmp_path, mode) as f:
                 f.write(buffer)
             
-            reader = can.LogReader(tmp_path)
-            self.log_messages = list(reader)
+            self.log_messages = self._parse_log_file(tmp_path)
             # optionally remove the file to save memory/space
             try:
                 os.remove(tmp_path)

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem } from '@mui/material';
-import { Virtuoso } from 'react-virtuoso';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Toolbar as MuiToolbar } from '@mui/material';
+import { TableVirtuoso } from 'react-virtuoso';
+import type { TableComponents } from 'react-virtuoso';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { getApi } from '../api';
@@ -18,6 +19,14 @@ interface CanMessage {
     signals: Record<string, number>;
   } | null;
 }
+
+const VirtuosoTableComponents: TableComponents<CanMessage> = {
+  Scroller: React.forwardRef<HTMLDivElement>((props, ref) => <TableContainer {...props} ref={ref} />),
+  Table: (props: any) => <Table {...props} sx={{ borderCollapse: 'separate', tableLayout: 'fixed' }} size="small" />,
+  TableHead,
+  TableRow: ({ item: _item, ...props }: any) => <TableRow {...props} hover sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }} />,
+  TableBody: React.forwardRef<HTMLTableSectionElement>((props, ref) => <TableBody {...props} ref={ref} />),
+};
 
 export const LogViewer = () => {
   const [totalCount, setTotalCount] = useState(0);
@@ -112,22 +121,27 @@ export const LogViewer = () => {
     };
 
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        borderBottom: '1px solid #333', 
-        '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
-        cursor: 'pointer'
-      }}>
+      <React.Fragment>
         {columns.filter(c => c.visible).map(col => (
-          <Box key={col.id} sx={{ flex: 1, p: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <TableCell key={col.id} sx={{ p: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', color: col.id.startsWith('decoded') ? '#4db8ff' : 'text.primary' }}>
               {rowData[col.id]}
             </Typography>
-          </Box>
+          </TableCell>
         ))}
-      </Box>
+      </React.Fragment>
     );
   };
+
+  const fixedHeaderContent = () => (
+    <TableRow sx={{ bgcolor: 'background.paper' }}>
+      {columns.filter(c => c.visible).map(col => (
+        <TableCell key={col.id} sx={{ p: 1, fontWeight: 'bold' }}>
+          {col.label}
+        </TableCell>
+      ))}
+    </TableRow>
+  );
 
   const toggleColumn = (id: string) => {
     setColumns(cols => cols.map(c => c.id === id ? { ...c, visible: !c.visible } : c));
@@ -135,31 +149,24 @@ export const LogViewer = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.default' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', borderBottom: '1px solid #444', bgcolor: '#1e1e1e', alignItems: 'center' }}>
-        {columns.filter(c => c.visible).map(col => (
-          <Box key={col.id} sx={{ flex: 1, p: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
-              {col.label}
-            </Typography>
-          </Box>
-        ))}
-        <Box sx={{ ml: 'auto', p: 0.5, display: 'flex' }}>
-          <IconButton size="small" onClick={() => setReverseSort(r => !r)} title="Reverse Sort">
-            <SwapVertIcon fontSize="small" color={reverseSort ? "primary" : "inherit"} />
-          </IconButton>
-          <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)} title="Columns">
-            <ViewColumnIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      </Box>
+      {/* Controls Toolbar */}
+      <MuiToolbar variant="dense" sx={{ minHeight: '36px !important', borderBottom: 1, borderColor: 'divider', justifyContent: 'flex-end', px: 1 }}>
+        <IconButton size="small" onClick={() => setReverseSort(r => !r)} title="Reverse Sort">
+          <SwapVertIcon fontSize="small" color={reverseSort ? "primary" : "inherit"} />
+        </IconButton>
+        <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)} title="Columns">
+          <ViewColumnIcon fontSize="small" />
+        </IconButton>
+      </MuiToolbar>
 
-      {/* List */}
+      {/* Table */}
       <Box sx={{ flexGrow: 1 }}>
         {totalCount > 0 ? (
-          <Virtuoso
+          <TableVirtuoso
             style={{ height: '100%' }}
             totalCount={totalCount}
+            components={VirtuosoTableComponents}
+            fixedHeaderContent={fixedHeaderContent}
             itemContent={renderRow}
             overscan={200}
           />

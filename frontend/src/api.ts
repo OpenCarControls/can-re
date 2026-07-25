@@ -22,13 +22,21 @@ global_api = Api()
   private async runMethod(method: string, args: any[]) {
     // For Pyodide, we pass arguments by converting them to JSON and back, or using pyodide globals
     const argsJson = JSON.stringify(args);
+    const callId = `_pyodide_args_${Math.random().toString(36).substring(2)}`;
+    (window as any)[callId] = argsJson;
     const code = `
 import json
-args = json.loads('''${argsJson}''')
+import js
+args = json.loads(getattr(js, "${callId}"))
 res = global_api.${method}(*args)
 json.dumps(res)
     `;
-    const resStr = await this.pyodide.runPythonAsync(code);
+    let resStr;
+    try {
+      resStr = await this.pyodide.runPythonAsync(code);
+    } finally {
+      delete (window as any)[callId];
+    }
     return JSON.parse(resStr);
   }
 
