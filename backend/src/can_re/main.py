@@ -26,25 +26,7 @@ class Api:
         print(f"Message from frontend: {message}")
         return f"Python received: {message}"
 
-    def minimize_window(self):
-        window = self.get_window()
-        if window:
-            window.minimize()
 
-    def maximize_window(self):
-        window = self.get_window()
-        if window:
-            if self.is_maximized:
-                window.restore()
-                self.is_maximized = False
-            else:
-                window.maximize()
-                self.is_maximized = True
-
-    def close_window(self):
-        window = self.get_window()
-        if window:
-            window.destroy()
 
     def prompt_load_dbc(self):
         window = self.get_window()
@@ -157,7 +139,9 @@ class Api:
             return []
 
 def get_entrypoint():
-    if getattr(sys, 'frozen', False):
+    if "CAN_RE_DIST_PATH" in os.environ:
+        return str(Path(os.environ["CAN_RE_DIST_PATH"]) / "index.html")
+    elif getattr(sys, 'frozen', False):
         # The application is frozen (packaged by PyInstaller)
         # We assume the UI is bundled inside the MEIPASS directory under 'dist'
         base_path = Path(sys._MEIPASS)
@@ -167,10 +151,15 @@ def get_entrypoint():
         return "http://localhost:5173"
 
 def get_version_string():
-    if getattr(sys, 'frozen', False):
+    dist_path = None
+    if "CAN_RE_DIST_PATH" in os.environ:
+        dist_path = Path(os.environ["CAN_RE_DIST_PATH"])
+    elif getattr(sys, 'frozen', False):
+        dist_path = Path(sys._MEIPASS) / "dist"
+        
+    if dist_path:
         try:
-            base_path = Path(sys._MEIPASS)
-            with open(base_path / "dist" / "version.json", "r") as f:
+            with open(dist_path / "version.json", "r") as f:
                 data = json.load(f)
                 return f" - v{data.get('version', '?')} ({data.get('hash', '?')})"
         except Exception:
@@ -184,7 +173,17 @@ def main():
     if webview:
         title = f"CAN RE{get_version_string()}"
         # create_window exposes the 'api' object as window.pywebview.api in JavaScript
-        window = webview.create_window(title, entry, js_api=api, frameless=True)
+        window = webview.create_window(title, entry, js_api=api)
+        
+        # Ensure process exits when window is closed
+        def on_closed():
+            os._exit(0)
+        window.events.closed += on_closed
+        
+        # Allow Ctrl+C to terminate the application
+        import signal
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        
         is_dev = not getattr(sys, 'frozen', False)
         webview.start(debug=is_dev)
     else:

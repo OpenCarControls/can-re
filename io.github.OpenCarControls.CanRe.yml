@@ -1,0 +1,41 @@
+app-id: io.github.OpenCarControls.CanRe
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: can-re
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --share=network
+  - --talk-name=org.freedesktop.portal.Desktop
+
+modules:
+  - name: can-re
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    build-commands:
+      # Install backend using pip
+      - pip3 install --prefix=/app backend/.[desktop]
+      
+      # Copy frontend distribution
+      - mkdir -p /app/share/can-re
+      - cp -r frontend-dist /app/share/can-re/dist
+      
+      # Create an executable wrapper to export CAN_RE_DIST_PATH
+      - mkdir -p /app/bin
+      - |
+        cat << 'EOF' > /app/bin/can-re
+        #!/bin/sh
+        export CAN_RE_DIST_PATH=/app/share/can-re/dist
+        exec python3 -m can_re.main "$@"
+        EOF
+      - chmod +x /app/bin/can-re
+
+    sources:
+      # Use the repository root as source
+      - type: dir
+        path: .

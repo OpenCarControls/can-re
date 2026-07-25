@@ -4,7 +4,6 @@ import type { IJsonModel } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css'; // Use dark mode by default
 import { Toolbar } from './Toolbar';
 import { LogViewer } from './LogViewer';
-import { Titlebar } from './Titlebar';
 import { Box, Typography } from '@mui/material';
 
 const defaultLayout: IJsonModel = {
@@ -68,9 +67,6 @@ export const LayoutManager = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
-      {/* Titlebar area */}
-      <Titlebar />
-
       {/* Toolbar area */}
       <Box sx={{ height: 48, flexShrink: 0, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar />
