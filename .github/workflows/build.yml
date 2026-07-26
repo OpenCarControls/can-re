@@ -117,6 +117,12 @@ jobs:
           # We run pyinstaller through uv
           uv run pyinstaller --name can-re --noconfirm ${{ matrix.pyinstaller_args }} --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_re/main.py
 
+      - name: Install Flatpak dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+
       - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
