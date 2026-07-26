@@ -16,6 +16,10 @@ class Api:
         self.dbc = None
         self.log_messages = []
         self.is_maximized = False
+        if sys.platform == 'emscripten':
+            self.request_file = self._request_file_async
+            self.load_dbc = self._load_dbc_async
+            self.load_log = self._load_log_async
 
     def get_window(self):
         if webview and len(webview.windows) > 0:
@@ -28,27 +32,104 @@ class Api:
 
 
 
-    def prompt_load_dbc(self):
+    def _get_settings_path(self):
+        config_dir = Path.home() / ".can-re"
+        config_dir.mkdir(exist_ok=True)
+        return config_dir / "settings.json"
+
+    def get_settings(self, namespace: str):
+        if sys.platform == 'emscripten':
+            import js
+            try:
+                data = json.loads(js.window.localStorage.getItem('can_re_settings') or "{}")
+                return data.get(namespace)
+            except Exception:
+                return None
+        else:
+            path = self._get_settings_path()
+            if path.exists():
+                try:
+                    with open(path, "r") as f:
+                        data = json.load(f)
+                        return data.get(namespace)
+                except Exception:
+                    pass
+            return None
+
+    def set_settings(self, namespace: str, data: dict):
+        if sys.platform == 'emscripten':
+            import js
+            try:
+                current_data = json.loads(js.window.localStorage.getItem('can_re_settings') or "{}")
+                current_data[namespace] = data
+                js.window.localStorage.setItem('can_re_settings', json.dumps(current_data))
+                return True
+            except Exception as e:
+                print(f"Failed to save settings: {e}")
+                return False
+        else:
+            path = self._get_settings_path()
+            current_data = {}
+            if path.exists():
+                try:
+                    with open(path, "r") as f:
+                        current_data = json.load(f)
+                except Exception:
+                    pass
+            current_data[namespace] = data
+            try:
+                with open(path, "w") as f:
+                    json.dump(current_data, f)
+                return True
+            except Exception as e:
+                print(f"Failed to save settings: {e}")
+                return False
+
+    def request_file(self, file_types=None):
         window = self.get_window()
         if not window:
-            return {"error": "Native dialogs not supported in this mode"}
+            return None, None
         
-        file_types = ('DBC Files (*.dbc)', 'All files (*.*)')
         result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
         if result and len(result) > 0:
             file_path = result[0]
-            try:
-                self.dbc = cantools.database.load_file(file_path)
-                return {"success": True, "file": os.path.basename(file_path), "messages_count": len(self.dbc.messages)}
-            except Exception as e:
-                traceback.print_exc()
-                return {"error": str(e)}
-        return {"cancelled": True}
+            return os.path.basename(file_path), file_path
+        return None, None
 
-    def load_dbc_from_buffer(self, content: str, filename: str):
+    async def _request_file_async(self, file_types=None):
+        import js
+        import tempfile
         try:
-            self.dbc = cantools.database.load_string(content)
-            return {"success": True, "file": filename, "messages_count": len(self.dbc.messages)}
+            res = await js.window.webFileProxy(file_types)
+            if res and res.name:
+                name = res.name
+                content_bytes = res.content.to_py()
+                tmp_path = os.path.join(tempfile.gettempdir(), name)
+                with open(tmp_path, "wb") as f:
+                    f.write(content_bytes)
+                return name, tmp_path
+        except Exception:
+            traceback.print_exc()
+        return None, None
+
+    def load_dbc(self):
+        try:
+            name, path = self.request_file(file_types=('DBC Files (*.dbc)', 'All files (*.*)'))
+            if path:
+                self.dbc = cantools.database.load_file(path)
+                return {"success": True, "file": name, "messages_count": len(self.dbc.messages)}
+            return {"cancelled": True}
+        except Exception as e:
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    async def _load_dbc_async(self):
+        try:
+            name, path = await self._request_file_async(file_types=('DBC Files (*.dbc)', 'All files (*.*)'))
+            if path:
+                self.dbc = cantools.database.load_file(path)
+                return {"success": True, "file": name, "messages_count": len(self.dbc.messages)}
+            return {"cancelled": True}
         except Exception as e:
             traceback.print_exc()
             return {"error": str(e)}
@@ -84,41 +165,24 @@ class Api:
                         return messages
             raise e
 
-    def prompt_load_log(self):
-        window = self.get_window()
-        if not window:
-            return {"error": "Native dialogs not supported in this mode"}
-        
-        file_types = ('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)')
-        result = window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
-        if result and len(result) > 0:
-            file_path = result[0]
-            try:
-                self.log_messages = self._parse_log_file(file_path)
-                return {"success": True, "file": os.path.basename(file_path), "total_count": len(self.log_messages)}
-            except Exception as e:
-                traceback.print_exc()
-                return {"error": str(e)}
-        return {"cancelled": True}
-
-    def load_log_from_buffer(self, buffer: str, filename: str):
+    def load_log(self):
         try:
-            # We write the buffer to a temporary file so can.LogReader can guess the format from the filename
-            import tempfile
-            # Web mode (Pyodide) passes strings mostly, but could be bytes.
-            mode = "w" if isinstance(buffer, str) else "wb"
-            tmp_path = os.path.join(tempfile.gettempdir(), filename)
-            with open(tmp_path, mode) as f:
-                f.write(buffer)
-            
-            self.log_messages = self._parse_log_file(tmp_path)
-            # optionally remove the file to save memory/space
-            try:
-                os.remove(tmp_path)
-            except:
-                pass
-            
-            return {"success": True, "file": filename, "total_count": len(self.log_messages)}
+            name, path = self.request_file(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
+            if path:
+                self.log_messages = self._parse_log_file(path)
+                return {"success": True, "file": name, "total_count": len(self.log_messages)}
+            return {"cancelled": True}
+        except Exception as e:
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    async def _load_log_async(self):
+        try:
+            name, path = await self._request_file_async(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
+            if path:
+                self.log_messages = self._parse_log_file(path)
+                return {"success": True, "file": name, "total_count": len(self.log_messages)}
+            return {"cancelled": True}
         except Exception as e:
             traceback.print_exc()
             return {"error": str(e)}

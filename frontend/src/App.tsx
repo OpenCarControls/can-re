@@ -8,6 +8,9 @@ declare global {
   interface Window {
     pywebview?: any;
     loadPyodide?: any;
+    api?: any;
+    __pyodide_api?: any;
+    webFileProxy?: any;
   }
 }
 
