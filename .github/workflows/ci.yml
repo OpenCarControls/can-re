@@ -121,9 +121,9 @@ jobs:
         include:
           - os: ubuntu-24.04
             name: linux
-            ext: AppImage
+            ext: flatpak
             sep: ":"
-            pyinstaller_args: "--onedir"
+            pyinstaller_args: ""
           - os: windows-latest
             name: windows
             ext: exe
@@ -150,32 +150,20 @@ jobs:
           path: ./frontend-dist
 
       - name: Build Backend (PyInstaller)
+        if: runner.os == 'Windows'
         working-directory: ./backend
         run: |
           uv sync --extra desktop
           # We run pyinstaller through uv
           uv run pyinstaller --name can-re --noconfirm ${{ matrix.pyinstaller_args }} --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_re/main.py
 
-      - name: Build AppImage (Linux)
+      - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
-        working-directory: ./backend/dist
-        run: |
-          mkdir -p can-re.AppDir/usr/bin
-          cp -r can-re/* can-re.AppDir/
-          echo '#!/bin/sh' > can-re.AppDir/AppRun
-          echo 'HERE="$(dirname "$(readlink -f "${0}")")"' >> can-re.AppDir/AppRun
-          echo 'exec "${HERE}/can-re" "$@"' >> can-re.AppDir/AppRun
-          chmod +x can-re.AppDir/AppRun
-          echo '[Desktop Entry]' > can-re.AppDir/can-re.desktop
-          echo 'Name=can-re' >> can-re.AppDir/can-re.desktop
-          echo 'Exec=can-re' >> can-re.AppDir/can-re.desktop
-          echo 'Icon=can-re' >> can-re.AppDir/can-re.desktop
-          echo 'Type=Application' >> can-re.AppDir/can-re.desktop
-          echo 'Categories=Utility;' >> can-re.AppDir/can-re.desktop
-          cp ../../frontend/public/favicon.svg can-re.AppDir/can-re.svg
-          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool-x86_64.AppImage
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run can-re.AppDir can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.AppImage
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: backend/dist/can-re-${{ matrix.name }}-v${{ needs.release.outputs.new_release_version }}.flatpak
+          manifest-path: io.github.OpenCarControls.CanRe.yml
+          cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Prepare Executable (Windows)
         if: runner.os == 'Windows'
