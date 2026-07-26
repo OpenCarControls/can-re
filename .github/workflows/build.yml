@@ -122,13 +122,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
-          # Create a wrapper so flatpak commands run as root, bypassing polkit prompts
-          sudo tee /usr/local/bin/flatpak << 'EOF'
-          #!/bin/bash
-          exec sudo /usr/bin/flatpak "$@"
-          EOF
-          sudo chmod +x /usr/local/bin/flatpak
           sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          # Pre-install the runtimes as root so the action doesn't hit polkit permission errors
+          sudo flatpak install -y flathub org.gnome.Sdk//46 org.gnome.Platform//46
 
       - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
