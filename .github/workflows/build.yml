@@ -6,18 +6,18 @@ on:
       version:
         required: true
         type: string
-        description: 'Version string to use for the build'
+        description: "Version string to use for the build"
       ref:
         required: false
         type: string
-        description: 'Git ref to checkout'
+        description: "Git ref to checkout"
 
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
@@ -28,7 +28,7 @@ jobs:
           echo "{\"version\": \"${{ inputs.version }}\", \"hash\": \"$(git rev-parse --short HEAD)\"}" > ./frontend/public/version.json
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
@@ -39,7 +39,7 @@ jobs:
           npm run build:ui
 
       - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: ./frontend/dist
@@ -49,17 +49,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
 
       - name: Download frontend artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: ./frontend-dist
@@ -71,7 +71,7 @@ jobs:
           cp frontend/public/wheels/* ./frontend-dist/wheels/
 
       - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: ./frontend-dist
@@ -94,17 +94,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
 
       - name: Download frontend artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: ./frontend-dist
@@ -129,7 +129,7 @@ jobs:
 
       - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        uses: flatpak/flatpak-github-actions@v6
         with:
           bundle: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.flatpak
           manifest-path: io.github.OpenCarControls.CanRe.yml
@@ -143,7 +143,7 @@ jobs:
           Rename-Item -Path can-re.exe -NewName can-re-${{ matrix.name }}-v${{ inputs.version }}.exe
 
       - name: Upload Desktop Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: can-re-${{ matrix.name }}
           path: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.${{ matrix.ext }}
