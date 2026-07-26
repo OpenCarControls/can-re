@@ -134,6 +134,7 @@ jobs:
           bundle: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.flatpak
           manifest-path: io.github.OpenCarControls.CanRe.yml
           cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: false
 
       - name: Prepare Executable (Windows)
         if: runner.os == 'Windows'
