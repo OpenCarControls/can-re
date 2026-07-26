@@ -1,0 +1,149 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+        description: 'Version string to use for the build'
+      ref:
+        required: false
+        type: string
+        description: 'Git ref to checkout'
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Extract version
+        run: |
+          echo "APP_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          mkdir -p ./frontend/public
+          echo "{\"version\": \"${{ inputs.version }}\", \"hash\": \"$(git rev-parse --short HEAD)\"}" > ./frontend/public/version.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build Frontend (React Assets Only)
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build:ui
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./frontend/dist
+
+  build-web:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./frontend-dist
+
+      - name: Build Python Wheels and Merge
+        run: |
+          bash scripts/build_py.sh
+          mkdir -p ./frontend-dist/wheels
+          cp frontend/public/wheels/* ./frontend-dist/wheels/
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ./frontend-dist
+
+  build-desktop:
+    needs: build-frontend
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux
+            ext: flatpak
+            sep: ":"
+            pyinstaller_args: ""
+          - os: windows-latest
+            name: windows
+            ext: exe
+            sep: ";"
+            pyinstaller_args: "--onefile"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./frontend-dist
+
+      - name: Build Backend (PyInstaller)
+        if: runner.os == 'Windows'
+        working-directory: ./backend
+        run: |
+          uv sync --extra desktop
+          # We run pyinstaller through uv
+          uv run pyinstaller --name can-re --noconfirm ${{ matrix.pyinstaller_args }} --windowed --add-data "../frontend-dist${{ matrix.sep }}dist" src/can_re/main.py
+
+      - name: Install Flatpak dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          # Pre-install the runtimes as root so the action doesn't hit polkit permission errors
+          sudo flatpak install -y flathub org.gnome.Sdk//47 org.gnome.Platform//47
+          mkdir -p backend/dist
+
+      - name: Build Flatpak (Linux)
+        if: runner.os == 'Linux'
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.flatpak
+          manifest-path: io.github.OpenCarControls.CanRe.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: false
+
+      - name: Prepare Executable (Windows)
+        if: runner.os == 'Windows'
+        working-directory: ./backend/dist
+        run: |
+          Rename-Item -Path can-re.exe -NewName can-re-${{ matrix.name }}-v${{ inputs.version }}.exe
+
+      - name: Upload Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: can-re-${{ matrix.name }}
+          path: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.${{ matrix.ext }}
