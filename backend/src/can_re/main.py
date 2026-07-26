@@ -11,15 +11,36 @@ from pathlib import Path
 import can
 import cantools
 
+from can_re.core import EventBus, ServiceRegistry, StateManager
+
 class Api:
     def __init__(self):
+        self.events = EventBus()
+        self.services = ServiceRegistry()
+        self.state = StateManager(self.events)
+        
         self.dbc = None
-        self.log_messages = []
         self.is_maximized = False
         if sys.platform == 'emscripten':
             self.request_file = self._request_file_async
             self.load_dbc = self._load_dbc_async
             self.load_log = self._load_log_async
+            self.call_service = self._call_service_async
+            
+        # Temporarily register services until we extract features to plugins
+        self.services.register('core.load_log', self.load_log)
+        self.services.register('core.load_dbc', self.load_dbc)
+        self.services.register('core.get_log_chunk', self.get_log_chunk)
+
+    def call_service(self, service_name: str, *args):
+        return self.services.call(service_name, *args)
+
+    async def _call_service_async(self, service_name: str, *args):
+        res = self.services.call(service_name, *args)
+        import inspect
+        if inspect.iscoroutine(res):
+            return await res
+        return res
 
     def get_window(self):
         if webview and len(webview.windows) > 0:
@@ -169,8 +190,10 @@ class Api:
         try:
             name, path = self.request_file(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
             if path:
-                self.log_messages = self._parse_log_file(path)
-                return {"success": True, "file": name, "total_count": len(self.log_messages)}
+                frames = self._parse_log_file(path)
+                self.state.clear()
+                self.state.add_frames(frames)
+                return {"success": True, "file": name, "total_count": len(self.state.frames)}
             return {"cancelled": True}
         except Exception as e:
             traceback.print_exc()
@@ -180,8 +203,10 @@ class Api:
         try:
             name, path = await self._request_file_async(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
             if path:
-                self.log_messages = self._parse_log_file(path)
-                return {"success": True, "file": name, "total_count": len(self.log_messages)}
+                frames = self._parse_log_file(path)
+                self.state.clear()
+                self.state.add_frames(frames)
+                return {"success": True, "file": name, "total_count": len(self.state.frames)}
             return {"cancelled": True}
         except Exception as e:
             traceback.print_exc()
@@ -189,19 +214,17 @@ class Api:
 
     def get_log_chunk(self, start: int, length: int, reverse: bool = False):
         try:
-            total = len(self.log_messages)
+            total = len(self.state.frames)
             if total == 0:
                 return []
             
             if reverse:
-                # If reverse, start from the end
-                # e.g., total=100. start=0, length=10 -> idx: 90..99, reversed
                 end_idx = total - start
                 start_idx = max(0, end_idx - length)
-                slice_msgs = self.log_messages[start_idx:end_idx]
+                slice_msgs = self.state.frames[start_idx:end_idx]
                 slice_msgs = slice_msgs[::-1]
             else:
-                slice_msgs = self.log_messages[start:start + length]
+                slice_msgs = self.state.frames[start:start + length]
             
             result = []
             for msg in slice_msgs:

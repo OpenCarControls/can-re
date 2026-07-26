@@ -72,7 +72,7 @@ export const LogViewer = () => {
 
     const start = chunkIndex * CHUNK_SIZE;
     try {
-      const msgs = await getApi().get_log_chunk(start, CHUNK_SIZE, rev);
+      const msgs = await getApi().call_service('core.get_log_chunk', start, CHUNK_SIZE, rev);
       setCache(prev => ({ ...prev, [chunkIndex]: msgs }));
     } catch (e) {
       console.error("Failed to fetch chunk", e);

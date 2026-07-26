@@ -1,7 +1,5 @@
 export interface ApiClient {
-  load_dbc: () => Promise<any>;
-  load_log: () => Promise<any>;
-  get_log_chunk: (start: number, length: number, reverse: boolean) => Promise<any[]>;
+  call_service: (service_name: string, ...args: any[]) => Promise<any>;
   get_settings: (namespace: string) => Promise<any>;
   set_settings: (namespace: string, data: any) => Promise<any>;
   [key: string]: any; // Allow for dynamic plugin methods

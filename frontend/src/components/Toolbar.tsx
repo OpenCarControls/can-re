@@ -10,7 +10,7 @@ export const Toolbar = () => {
 
   const handleDbcLoad = async () => {
     try {
-      const res = await getApi().load_dbc();
+      const res = await getApi().call_service('core.load_dbc');
       if (res && res.success) {
         setDbcName(res.file);
         window.dispatchEvent(new CustomEvent('dbcLoaded'));
@@ -25,7 +25,7 @@ export const Toolbar = () => {
 
   const handleLogLoad = async () => {
     try {
-      const res = await getApi().load_log();
+      const res = await getApi().call_service('core.load_log');
       if (res && res.success) {
         setLogName(res.file);
         window.dispatchEvent(new CustomEvent('logLoaded', { detail: { count: res.total_count } }));

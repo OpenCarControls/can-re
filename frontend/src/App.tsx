@@ -11,6 +11,12 @@ declare global {
     api?: any;
     __pyodide_api?: any;
     webFileProxy?: any;
+    React?: any;
+    ReactDOM?: any;
+    MuiMaterial?: any;
+    EmotionReact?: any;
+    EmotionStyled?: any;
+    FlexLayout?: any;
   }
 }
 
