@@ -24,6 +24,15 @@ const darkTheme = createTheme({
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+  },
+  components: {
+    MuiButton: { defaultProps: { size: 'small' } },
+    MuiTextField: { defaultProps: { size: 'small', margin: 'dense' } },
+    MuiFormControl: { defaultProps: { size: 'small', margin: 'dense' } },
+    MuiList: { defaultProps: { dense: true } },
+    MuiMenuItem: { defaultProps: { dense: true } },
+    MuiTable: { defaultProps: { size: 'small' } },
+    MuiIconButton: { defaultProps: { size: 'small' } },
   }
 });
 

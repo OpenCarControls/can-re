@@ -1,0 +1,66 @@
+/* 
+  Material UI theme overrides for flexlayout-react 
+  Matches the dark theme colors in App.tsx
+*/
+
+.flexlayout__layout {
+  /* Match MUI typography */
+  --font-size: 0.875rem;
+}
+
+/* Material UI Tab Button Styling */
+.flexlayout__tab_button {
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.02857em;
+  padding: 6px 12px;
+  min-height: 36px;
+  border-bottom: 2px solid transparent !important;
+  transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+              color 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms,
+              border-bottom 250ms cubic-bezier(0.4, 0, 0.2, 1) 0ms !important;
+}
+
+.flexlayout__tab_button--selected {
+  background-color: transparent !important;
+}
+
+.flexlayout__tab_button:hover {
+  /* Colors injected via GlobalStyles */
+}
+
+/* Tab Bar Outer Container (The track where tabs sit) */
+.flexlayout__tabset_tabbar_outer {
+  /* Colors injected via GlobalStyles */
+}
+
+/* Remove default flexlayout borders that clash with MUI */
+.flexlayout__tabset_tabbar_inner_tab_container {
+  padding-left: 0;
+}
+.flexlayout__tabset_tabbar_inner_tab_container_top {
+  border-top: none;
+}
+.flexlayout__tabset_tabbar_inner_tab_container_bottom {
+  border-bottom: none;
+}
+
+/* Close Button (Trailing) Styling */
+.flexlayout__tab_button_trailing {
+  margin-left: 8px;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+}
+
+.flexlayout__tab_button_trailing:hover {
+  /* Colors injected via GlobalStyles */
+}
+
+/* Make icons look more like MUI SVGs */
+.flexlayout__tab_toolbar_button,
+.flexlayout__tab_button_trailing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
