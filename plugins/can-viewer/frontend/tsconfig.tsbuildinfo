@@ -1,1 +1,1 @@
-{"root":["./src/LogViewer.tsx","./src/SignalDetails.tsx","./src/index.ts","./src/pluginApi.ts"],"version":"5.9.3"}
+{"root":["./src/FrameDetails.tsx","./src/LogViewer.tsx","./src/index.ts","./src/pluginApi.ts"],"version":"5.9.3"}

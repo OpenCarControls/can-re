@@ -29,6 +29,10 @@ class CanViewerPlugin:
                     "decoded": None
                 }
                 result.append(msg_dict)
+            
+            if hasattr(self.api, 'parsing') and self.api.parsing.is_available():
+                result = self.api.parsing.decode_chunk(result)
+
             return result
         except Exception as e:
             traceback.print_exc()

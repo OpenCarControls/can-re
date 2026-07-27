@@ -1,5 +1,5 @@
 import { LogViewer } from './LogViewer';
-import { SignalDetails } from './SignalDetails';
+import { FrameDetails } from './FrameDetails';
 import { setApi } from './pluginApi';
 
 export function setup(context: any) {
@@ -15,9 +15,9 @@ export function setup(context: any) {
     });
 
     registerPanel({
-        id: 'signalDetails',
-        name: 'Signal Details',
-        component: SignalDetails,
+        id: 'frameDetails',
+        name: 'Frame Details',
+        component: FrameDetails,
         defaultZone: 'secondary',
         allowMultiple: false,
     });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Model, Layout, TabNode } from 'flexlayout-react';
+import { Model, Layout, TabNode, Actions } from 'flexlayout-react';
 import type { IJsonModel } from 'flexlayout-react';
 import { getApi } from '../api';
 import 'flexlayout-react/style/dark.css';
@@ -116,14 +116,25 @@ const defaultLayout: IJsonModel = {
         children: [
           {
             type: "tab",
-            name: "Signal Details",
-            component: "signalDetails",
-            id: "signalDetailsTab"
+            name: "Frame Details",
+            component: "frameDetails",
+            id: "frameDetailsTab"
           }
         ]
       }
     ]
   }
+};
+
+const PanelWrapper = ({ node, config }: { node: TabNode, config: any }) => {
+  useEffect(() => {
+    if (node.getName() !== config.name) {
+      node.getModel().doAction(Actions.renameTab(node.getId(), config.name));
+    }
+  }, [node, config.name]);
+
+  const Component = config.component;
+  return <Component node={node} />;
 };
 
 export const LayoutManager = () => {
@@ -151,8 +162,7 @@ export const LayoutManager = () => {
 
     const config = PanelRegistry.getPanel(componentId);
     if (config) {
-      const Component = config.component;
-      return <Component node={node} />;
+      return <PanelWrapper node={node} config={config} />;
     }
     return null;
   };
@@ -178,11 +188,11 @@ export const LayoutManager = () => {
         <Box sx={{ height: 48, flexShrink: 0, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar />
         </Box>
-        
+
         {/* Main layout area */}
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          <Layout 
-            model={model} 
+          <Layout
+            model={model}
             factory={factory}
             onModelChange={onModelChange}
             icons={{

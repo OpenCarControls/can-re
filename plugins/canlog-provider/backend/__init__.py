@@ -7,9 +7,23 @@ class CanLogProviderPlugin:
         self.api = api
 
     def _parse_log_file(self, file_path: str):
+        # Import CanFrame here or at the top of the file.
+        # Since this is a plugin, we can import from core.
+        from can_re.core.models import CanFrame
         try:
             reader = can.LogReader(file_path)
-            return list(reader)
+            messages = []
+            for msg in reader:
+                messages.append(CanFrame(
+                    timestamp=msg.timestamp,
+                    arbitration_id=msg.arbitration_id,
+                    data=bytes(msg.data),
+                    is_extended_id=msg.is_extended_id,
+                    is_rx=msg.is_rx,
+                    dlc=msg.dlc,
+                    channel=msg.channel if isinstance(msg.channel, str) else str(msg.channel)
+                ))
+            return messages
         except ValueError as e:
             if "too many values to unpack" in str(e) and file_path.lower().endswith('.csv'):
                 # Fallback for SavvyCAN Generic CSV
@@ -23,8 +37,8 @@ class CanLogProviderPlugin:
                             if len(row) < 6:
                                 continue
                             dlc = int(row[5])
-                            data = [int(x, 16) for x in row[6:6+dlc]]
-                            msg = can.Message(
+                            data = bytes([int(x, 16) for x in row[6:6+dlc]])
+                            msg = CanFrame(
                                 timestamp=float(row[0]) / 1000000.0,
                                 arbitration_id=int(row[1], 16),
                                 is_extended_id=(row[2].lower() == 'true'),
@@ -36,6 +50,7 @@ class CanLogProviderPlugin:
                             messages.append(msg)
                         return messages
             raise e
+
 
     def load_log(self):
         try:

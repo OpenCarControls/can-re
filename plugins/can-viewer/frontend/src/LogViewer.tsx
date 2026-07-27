@@ -24,13 +24,28 @@ interface CanMessage {
   dlc: number;
   data: number[];
   is_extended_id: boolean;
+  decoded?: any;
 }
 
 const VirtuosoTableComponents: TableComponents<CanMessage> = {
   Scroller: React.forwardRef<HTMLDivElement>((props, ref) => <TableContainer {...props} ref={ref} />),
   Table: (props: any) => <Table {...props} sx={{ borderCollapse: 'separate', tableLayout: 'fixed' }} size="small" />,
   TableHead: React.forwardRef<HTMLTableSectionElement>((props: any, ref) => <TableHead {...props} ref={ref} />),
-  TableRow: ({ item: _item, ...props }: any) => <TableRow {...props} hover sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }} />,
+  TableRow: (props: any) => {
+    const { item, context, ...restProps } = props;
+    return (
+      <TableRow 
+        {...restProps} 
+        hover 
+        onClick={() => {
+          if (context?.onRowClick && restProps['data-index'] !== undefined) {
+            context.onRowClick(restProps['data-index']);
+          }
+        }} 
+        sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }} 
+      />
+    );
+  },
   TableBody: React.forwardRef<HTMLTableSectionElement>((props, ref) => <TableBody {...props} ref={ref} />),
 };
 
@@ -44,7 +59,8 @@ export const LogViewer = () => {
     { id: 'timestamp', label: 'Timestamp', visible: true },
     { id: 'id', label: 'ID (Hex)', visible: true },
     { id: 'dlc', label: 'DLC', visible: true },
-    { id: 'data', label: 'Data', visible: true }
+    { id: 'data', label: 'Data', visible: true },
+    { id: 'decoded', label: 'Decoded Payload', visible: true }
   ]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -56,9 +72,17 @@ export const LogViewer = () => {
       fetchingChunks.current.clear();
     };
     
+    const handleDbcLoaded = () => {
+      // Clear cache so it refetches with the newly loaded DBC
+      setCache({});
+      fetchingChunks.current.clear();
+    };
+    
     window.addEventListener('logLoaded', handleLogLoaded);
+    window.addEventListener('dbcLoaded', handleDbcLoaded);
     return () => {
       window.removeEventListener('logLoaded', handleLogLoaded);
+      window.removeEventListener('dbcLoaded', handleDbcLoaded);
     };
   }, []);
 
@@ -102,11 +126,21 @@ export const LogViewer = () => {
     const idHex = item.id.toString(16).toUpperCase().padStart(item.is_extended_id ? 8 : 3, '0');
     const dataHex = item.data.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     
+    let decodedStr = '';
+    if (item.decoded) {
+      if (typeof item.decoded === 'string') {
+        decodedStr = item.decoded;
+      } else if (typeof item.decoded === 'object') {
+        decodedStr = Object.entries(item.decoded).map(([k, v]) => `${k}: ${v}`).join(', ');
+      }
+    }
+
     const rowData: Record<string, string> = {
       timestamp: item.timestamp.toFixed(6),
       id: `0x${idHex}`,
       dlc: item.dlc.toString(),
-      data: dataHex
+      data: dataHex,
+      decoded: decodedStr
     };
 
     return (
@@ -154,6 +188,15 @@ export const LogViewer = () => {
           <TableVirtuoso
             style={{ height: '100%' }}
             totalCount={totalCount}
+            context={{
+              onRowClick: (index: number) => {
+                const chunkIndex = Math.floor(index / CHUNK_SIZE);
+                const item = cache[chunkIndex]?.[index % CHUNK_SIZE];
+                if (item) {
+                  window.dispatchEvent(new CustomEvent('frameSelected', { detail: item }));
+                }
+              }
+            }}
             components={VirtuosoTableComponents}
             fixedHeaderContent={fixedHeaderContent}
             itemContent={renderRow}

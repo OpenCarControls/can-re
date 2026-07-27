@@ -8,7 +8,7 @@ import json
 import traceback
 from pathlib import Path
 
-from can_re.core import EventBus, ServiceRegistry, StateManager
+from can_re.core import EventBus, ServiceRegistry, StateManager, ParsingService
 from can_re.core.plugins import PluginManager
 
 class Api:
@@ -16,6 +16,7 @@ class Api:
         self.events = EventBus()
         self.services = ServiceRegistry()
         self.state = StateManager(self.events)
+        self.parsing = ParsingService()
         
         self.is_maximized = False
         self.plugin_manager = PluginManager(self)

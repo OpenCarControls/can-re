@@ -1,9 +1,11 @@
 import traceback
 import inspect
+import cantools
 
 class DbcParserPlugin:
     def __init__(self, api):
         self.api = api
+        self.db = None
 
     def load_dbc(self):
         try:
@@ -27,10 +29,44 @@ class DbcParserPlugin:
 
     def _process_dbc(self, name, path):
         if path:
-            # We are currently skipping actual cantools decoding as requested.
-            print(f"Loaded DBC: {name} (Parsing disabled for now)")
-            return {"success": True, "file": name, "messages_count": 0}
+            try:
+                self.db = cantools.database.load_file(path)
+                print(f"Loaded DBC: {name} with {len(self.db.messages)} messages")
+                
+                # Register this plugin as the active generic parser
+                if hasattr(self.api, 'parsing'):
+                    self.api.parsing.set_parser(self)
+                    
+                return {"success": True, "file": name, "messages_count": len(self.db.messages)}
+            except Exception as e:
+                traceback.print_exc()
+                return {"error": f"Failed to parse DBC: {e}"}
         return {"cancelled": True}
+
+    def decode_message(self, frame_id, data, is_extended_id=False):
+        if not self.db:
+            return None
+        try:
+            if isinstance(data, list):
+                data = bytes(data)
+            msg = self.db.get_message_by_frame_id(frame_id)
+            decoded = msg.decode(data)
+            # Convert cantools NamedSignalValue to string for JSON serialization
+            for k, v in decoded.items():
+                if type(v).__name__ == 'NamedSignalValue':
+                    decoded[k] = str(v)
+            return decoded
+        except KeyError:
+            # Message ID not found in DBC
+            return None
+        except Exception as e:
+            # Decode error (e.g. invalid length)
+            return None
+
+    def get_database(self):
+        if not self.db:
+            return None
+        return {"messages_count": len(self.db.messages)}
 
 def setup(api):
     plugin = DbcParserPlugin(api)
