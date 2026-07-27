@@ -40,6 +40,7 @@ jobs:
               (cd "$d" && npm ci && npm run build)
             fi
           done
+          bash scripts/prepare_plugins.sh
 
       - name: Build Frontend (React Assets Only)
         working-directory: ./frontend
@@ -52,6 +53,12 @@ jobs:
         with:
           name: frontend-dist
           path: ./frontend/dist
+
+      - name: Upload plugins artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
 
   build-web:
     needs: build-frontend
@@ -72,6 +79,12 @@ jobs:
         with:
           name: frontend-dist
           path: ./frontend-dist
+
+      - name: Download plugins artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
 
       - name: Build Python Wheels and Merge
         run: |
@@ -117,6 +130,12 @@ jobs:
         with:
           name: frontend-dist
           path: ./frontend-dist
+
+      - name: Download plugins artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
 
       - name: Build Backend (PyInstaller)
         if: runner.os == 'Windows'
