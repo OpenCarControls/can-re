@@ -138,7 +138,7 @@ jobs:
 
       - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
-        uses: flatpak/flatpak-github-actions@v6
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.flatpak
           manifest-path: io.github.OpenCarControls.CanRe.yml
