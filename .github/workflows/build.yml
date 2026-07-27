@@ -32,6 +32,15 @@ jobs:
         with:
           node-version: 24
 
+      - name: Build Plugins
+        run: |
+          for d in plugins/*/frontend; do
+            if [ -d "$d" ]; then
+              echo "Building $d"
+              (cd "$d" && npm ci && npm run build)
+            fi
+          done
+
       - name: Build Frontend (React Assets Only)
         working-directory: ./frontend
         run: |
