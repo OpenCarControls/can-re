@@ -19,7 +19,7 @@ class Api:
         
         self.is_maximized = False
         self.plugin_manager = PluginManager(self)
-        self.plugin_manager.discover_and_load_builtin_plugins()
+        self.plugin_manager.discover_builtin_plugins()
         
         # Load local desktop plugins if in desktop mode
         if sys.platform != 'emscripten':
@@ -31,8 +31,20 @@ class Api:
             self.request_file = self._request_file_async
             self.call_service = self._call_service_async
 
+    def get_discovered_plugins(self):
+        return self.plugin_manager.get_discovered_plugins()
+
     def get_active_plugins(self):
         return self.plugin_manager.get_active_plugins()
+
+    def get_python_dependencies(self):
+        return self.plugin_manager.get_python_dependencies()
+
+    def install_desktop_dependencies(self):
+        return self.plugin_manager.install_desktop_dependencies()
+
+    def load_plugin_backends(self):
+        return self.plugin_manager.load_plugin_backends()
 
     def get_plugin_bundle(self, plugin_id: str):
         return self.plugin_manager.get_plugin_bundle(plugin_id)

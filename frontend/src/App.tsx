@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { CircularProgress, Box, Typography } from '@mui/material'
-import { initApi } from './api'
+import { initApi, getApi } from './api'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
 import { loadActivePlugins } from './pluginLoader'
 import { LayoutManager } from './components/LayoutManager'
@@ -68,7 +68,13 @@ function App() {
     const init = async () => {
       if (window.pywebview) {
         initApi(window.pywebview, null);
+        const api = getApi();
+        
+        setStatus('Installing plugin dependencies...')
+        await api.install_desktop_dependencies();
+        
         setStatus('Loading plugins...')
+        await api.load_plugin_backends();
         await loadActivePlugins()
         setStatus('Connected to Python Backend (Desktop Mode)')
         setIsReady(true)
@@ -88,8 +94,16 @@ function App() {
           await micropip.install(wheelsList);
           
           initApi(null, loadedPyodide);
+          const api = getApi();
+          
+          setStatus('Resolving plugin dependencies...');
+          const deps = await api.get_python_dependencies();
+          if (deps && deps.length > 0) {
+            await micropip.install(deps);
+          }
           
           setStatus('Loading plugins...')
+          await api.load_plugin_backends();
           await loadActivePlugins()
           
           setStatus('Pyodide Loaded! (Web Mode)')

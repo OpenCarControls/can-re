@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Toolbar as MuiToolbar } from '@mui/material';
+import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Toolbar as MuiToolbar, SvgIcon } from '@mui/material';
 import { TableVirtuoso } from 'react-virtuoso';
 import type { TableComponents } from 'react-virtuoso';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
-import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { getApi } from './pluginApi';
+
+const ViewColumnIcon = (props: any) => (
+  <SvgIcon {...props}>
+    <path d="M14.67 5v14H9.33V5zm1 14H21V5h-5.33zm-7.34 0V5H3v14z" />
+  </SvgIcon>
+);
+
+const SwapVertIcon = (props: any) => (
+  <SvgIcon {...props}>
+    <path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99zM9 3 5 6.99h3V14h2V6.99h3z" />
+  </SvgIcon>
+);
 
 const CHUNK_SIZE = 500;
 
