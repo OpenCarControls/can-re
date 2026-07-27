@@ -4,9 +4,13 @@ set -e
 # Navigate to the project root regardless of where the script is called from
 cd "$(dirname "$0")/.."
 
+if [ "$CI" != "true" ]; then
+  bash scripts/prepare_plugins.sh
+fi
+
 echo "Building Python backend wheel..."
 cd backend
-uv build
+uv build --wheel
 
 echo "Copying wheel to frontend/public/wheels..."
 mkdir -p ../frontend/public/wheels

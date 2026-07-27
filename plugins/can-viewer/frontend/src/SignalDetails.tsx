@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
 
+
 export const SignalDetails = () => {
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: 'background.paper' }}>

@@ -1,0 +1,17 @@
+{
+  "id": "org.opencarcontrols.canlog-provider",
+  "name": "CAN Log Provider",
+  "version": "1.0.0",
+  "description": "Provider for loading static CAN log files.",
+  "environments": ["desktop", "web"],
+  "entry": {
+    "backend": "backend",
+    "frontend": "frontend/dist/bundle.js"
+  },
+  "dependencies": {
+    "python": [
+      "cantools>=42.0.3",
+      "python-can>=4.6.1"
+    ]
+  }
+}

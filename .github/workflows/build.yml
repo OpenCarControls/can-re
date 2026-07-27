@@ -32,6 +32,16 @@ jobs:
         with:
           node-version: 24
 
+      - name: Build Plugins
+        run: |
+          for d in plugins/*/frontend; do
+            if [ -d "$d" ]; then
+              echo "Building $d"
+              (cd "$d" && npm ci && npm run build)
+            fi
+          done
+          bash scripts/prepare_plugins.sh
+
       - name: Build Frontend (React Assets Only)
         working-directory: ./frontend
         run: |
@@ -43,6 +53,12 @@ jobs:
         with:
           name: frontend-dist
           path: ./frontend/dist
+
+      - name: Upload plugins artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
 
   build-web:
     needs: build-frontend
@@ -63,6 +79,12 @@ jobs:
         with:
           name: frontend-dist
           path: ./frontend-dist
+
+      - name: Download plugins artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
 
       - name: Build Python Wheels and Merge
         run: |
@@ -109,6 +131,12 @@ jobs:
           name: frontend-dist
           path: ./frontend-dist
 
+      - name: Download plugins artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: plugins-dist
+          path: ./backend/plugins_dist
+
       - name: Build Backend (PyInstaller)
         if: runner.os == 'Windows'
         working-directory: ./backend
@@ -129,7 +157,7 @@ jobs:
 
       - name: Build Flatpak (Linux)
         if: runner.os == 'Linux'
-        uses: flatpak/flatpak-github-actions@v6
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: backend/dist/can-re-${{ matrix.name }}-v${{ inputs.version }}.flatpak
           manifest-path: io.github.OpenCarControls.CanRe.yml

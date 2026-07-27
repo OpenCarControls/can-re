@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Model, Layout, TabNode } from 'flexlayout-react';
 import type { IJsonModel } from 'flexlayout-react';
+import { getApi } from '../api';
 import 'flexlayout-react/style/dark.css';
 import './flexlayout-mui.css';
 import { Box, GlobalStyles, useTheme, alpha } from '@mui/material';
@@ -11,29 +12,12 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 
 import { Toolbar } from './Toolbar';
-import { LogViewer } from './LogViewer';
-import { SignalDetails } from './SignalDetails';
+import { WorkspaceWizardBanner } from './WorkspaceWizardBanner';
 import { PanelRegistry } from './layout/PanelRegistry';
 import { LayoutProvider } from '../context/LayoutContext';
 
-const LAYOUT_STORAGE_KEY = 'can_re_layout';
 
-// Register default panels
-PanelRegistry.register({
-  id: 'logViewer',
-  name: 'CAN Log',
-  component: LogViewer,
-  defaultZone: 'primary',
-  allowMultiple: false,
-});
 
-PanelRegistry.register({
-  id: 'signalDetails',
-  name: 'Signal Details',
-  component: SignalDetails,
-  defaultZone: 'secondary',
-  allowMultiple: false,
-});
 
 const FlexLayoutStyles = () => {
   const theme = useTheme();
@@ -146,17 +130,19 @@ export const LayoutManager = () => {
   const [model, setModel] = useState<Model | null>(null);
 
   useEffect(() => {
-    const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    if (savedLayout) {
+    const loadSettings = async () => {
       try {
-        const json = JSON.parse(savedLayout);
-        setModel(Model.fromJson(json));
-        return;
+        const savedLayout = await getApi().get_settings('core.layout');
+        if (savedLayout) {
+          setModel(Model.fromJson(savedLayout));
+          return;
+        }
       } catch (e) {
-        console.error("Failed to parse saved layout", e);
+        console.warn("Failed to load layout from API:", e);
       }
-    }
-    setModel(Model.fromJson(defaultLayout));
+      setModel(Model.fromJson(defaultLayout));
+    };
+    loadSettings();
   }, []);
 
   const factory = (node: TabNode) => {
@@ -172,7 +158,11 @@ export const LayoutManager = () => {
   };
 
   const onModelChange = (newModel: Model) => {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newModel.toJson()));
+    try {
+      getApi().set_settings('core.layout', newModel.toJson());
+    } catch (e) {
+      console.error("Failed to save layout via API:", e);
+    }
   };
 
   if (!model) {
@@ -183,6 +173,7 @@ export const LayoutManager = () => {
     <LayoutProvider model={model}>
       <FlexLayoutStyles />
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
+        <WorkspaceWizardBanner />
         {/* Toolbar area */}
         <Box sx={{ height: 48, flexShrink: 0, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar />

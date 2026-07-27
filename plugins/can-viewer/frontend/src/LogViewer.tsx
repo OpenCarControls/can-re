@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Toolbar as MuiToolbar } from '@mui/material';
+import { Box, Typography, Checkbox, FormControlLabel, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Toolbar as MuiToolbar, SvgIcon } from '@mui/material';
 import { TableVirtuoso } from 'react-virtuoso';
 import type { TableComponents } from 'react-virtuoso';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
-import SwapVertIcon from '@mui/icons-material/SwapVert';
-import { getApi } from '../api';
+import { getApi } from './pluginApi';
+
+const ViewColumnIcon = (props: any) => (
+  <SvgIcon {...props}>
+    <path d="M14.67 5v14H9.33V5zm1 14H21V5h-5.33zm-7.34 0V5H3v14z" />
+  </SvgIcon>
+);
+
+const SwapVertIcon = (props: any) => (
+  <SvgIcon {...props}>
+    <path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99zM9 3 5 6.99h3V14h2V6.99h3z" />
+  </SvgIcon>
+);
 
 const CHUNK_SIZE = 500;
 
@@ -14,16 +24,12 @@ interface CanMessage {
   dlc: number;
   data: number[];
   is_extended_id: boolean;
-  decoded: {
-    name: string;
-    signals: Record<string, number>;
-  } | null;
 }
 
 const VirtuosoTableComponents: TableComponents<CanMessage> = {
   Scroller: React.forwardRef<HTMLDivElement>((props, ref) => <TableContainer {...props} ref={ref} />),
   Table: (props: any) => <Table {...props} sx={{ borderCollapse: 'separate', tableLayout: 'fixed' }} size="small" />,
-  TableHead,
+  TableHead: React.forwardRef<HTMLTableSectionElement>((props: any, ref) => <TableHead {...props} ref={ref} />),
   TableRow: ({ item: _item, ...props }: any) => <TableRow {...props} hover sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }} />,
   TableBody: React.forwardRef<HTMLTableSectionElement>((props, ref) => <TableBody {...props} ref={ref} />),
 };
@@ -38,9 +44,7 @@ export const LogViewer = () => {
     { id: 'timestamp', label: 'Timestamp', visible: true },
     { id: 'id', label: 'ID (Hex)', visible: true },
     { id: 'dlc', label: 'DLC', visible: true },
-    { id: 'data', label: 'Data', visible: true },
-    { id: 'decoded_name', label: 'Message Name', visible: true },
-    { id: 'decoded_signals', label: 'Signals', visible: true }
+    { id: 'data', label: 'Data', visible: true }
   ]);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -52,17 +56,9 @@ export const LogViewer = () => {
       fetchingChunks.current.clear();
     };
     
-    const handleDbcLoaded = () => {
-      // Clear cache so it fetches decoded values again
-      setCache({});
-      fetchingChunks.current.clear();
-    };
-
     window.addEventListener('logLoaded', handleLogLoaded);
-    window.addEventListener('dbcLoaded', handleDbcLoaded);
     return () => {
       window.removeEventListener('logLoaded', handleLogLoaded);
-      window.removeEventListener('dbcLoaded', handleDbcLoaded);
     };
   }, []);
 
@@ -72,7 +68,7 @@ export const LogViewer = () => {
 
     const start = chunkIndex * CHUNK_SIZE;
     try {
-      const msgs = await getApi().get_log_chunk(start, CHUNK_SIZE, rev);
+      const msgs = await getApi().call_service('can_log.get_chunk', start, CHUNK_SIZE, rev);
       setCache(prev => ({ ...prev, [chunkIndex]: msgs }));
     } catch (e) {
       console.error("Failed to fetch chunk", e);
@@ -106,18 +102,11 @@ export const LogViewer = () => {
     const idHex = item.id.toString(16).toUpperCase().padStart(item.is_extended_id ? 8 : 3, '0');
     const dataHex = item.data.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     
-    let signalsStr = '';
-    if (item.decoded) {
-      signalsStr = Object.entries(item.decoded.signals).map(([k, v]) => `${k}: ${v}`).join(', ');
-    }
-
     const rowData: Record<string, string> = {
       timestamp: item.timestamp.toFixed(6),
       id: `0x${idHex}`,
       dlc: item.dlc.toString(),
-      data: dataHex,
-      decoded_name: item.decoded?.name || '-',
-      decoded_signals: signalsStr || '-'
+      data: dataHex
     };
 
     return (

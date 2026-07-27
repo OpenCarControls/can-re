@@ -1,111 +1,101 @@
 export interface ApiClient {
-  prompt_load_dbc: () => Promise<any>;
-  prompt_load_log: () => Promise<any>;
-  load_dbc_from_buffer: (content: string, filename: string) => Promise<any>;
-  load_log_from_buffer: (buffer: string, filename: string) => Promise<any>;
-  get_log_chunk: (start: number, length: number, reverse: boolean) => Promise<any[]>;
+  call_service: (service_name: string, ...args: any[]) => Promise<any>;
+  get_settings: (namespace: string) => Promise<any>;
+  set_settings: (namespace: string, data: any) => Promise<any>;
+  [key: string]: any; // Allow for dynamic plugin methods
 }
 
-class WebApiClient implements ApiClient {
-  private pyodide: any;
-
-  constructor(pyodide: any) {
-    this.pyodide = pyodide;
-    // Initialize the global api instance in Python
-    this.pyodide.runPython(`
-from can_re.main import Api
-import json
-global_api = Api()
-    `);
-  }
-
-  private async runMethod(method: string, args: any[]) {
-    // For Pyodide, we pass arguments by converting them to JSON and back, or using pyodide globals
-    const argsJson = JSON.stringify(args);
-    const callId = `_pyodide_args_${Math.random().toString(36).substring(2)}`;
-    (window as any)[callId] = argsJson;
-    const code = `
-import json
-import js
-args = json.loads(getattr(js, "${callId}"))
-res = global_api.${method}(*args)
-json.dumps(res)
-    `;
-    let resStr;
-    try {
-      resStr = await this.pyodide.runPythonAsync(code);
-    } finally {
-      delete (window as any)[callId];
-    }
-    return JSON.parse(resStr);
-  }
-
-  async prompt_load_dbc() {
-    return { error: "Native dialogs not supported in web mode" };
-  }
-
-  async prompt_load_log() {
-    return { error: "Native dialogs not supported in web mode" };
-  }
-
-  async load_dbc_from_buffer(content: string, filename: string) {
-    return this.runMethod("load_dbc_from_buffer", [content, filename]);
-  }
-
-  async load_log_from_buffer(buffer: string, filename: string) {
-    return this.runMethod("load_log_from_buffer", [buffer, filename]);
-  }
-
-  async get_log_chunk(start: number, length: number, reverse: boolean) {
-    return this.runMethod("get_log_chunk", [start, length, reverse]);
-  }
-}
-
-class DesktopApiClient implements ApiClient {
-  private api: any;
-  constructor(api: any) {
-    this.api = api;
-  }
-
-  async prompt_load_dbc() {
-    return this.api.prompt_load_dbc();
-  }
-
-  async prompt_load_log() {
-    return this.api.prompt_load_log();
-  }
-
-  async load_dbc_from_buffer(content: string, filename: string) {
-    return this.api.load_dbc_from_buffer(content, filename);
-  }
-
-  async load_log_from_buffer(buffer: string, filename: string) {
-    return this.api.load_log_from_buffer(buffer, filename);
-  }
-
-  async get_log_chunk(start: number, length: number, reverse: boolean) {
-    return this.api.get_log_chunk(start, length, reverse);
-  }
-}
-
-let instance: ApiClient | null = null;
 let mode: 'desktop' | 'web' | null = null;
 
 export const initApi = (pywebview: any, pyodide: any) => {
   if (pywebview && pywebview.api) {
-    instance = new DesktopApiClient(pywebview.api);
+    // pywebview natively returns Promises for all method calls
+    window.api = pywebview.api;
     mode = 'desktop';
   } else if (pyodide) {
-    instance = new WebApiClient(pyodide);
+    // Web File Proxy for Pyodide
+    window.webFileProxy = async (fileTypes: string[] | null) => {
+      return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        
+        // Simple mapping of file_types tuple to accept string if provided
+        if (fileTypes && fileTypes.length > 0) {
+          const acceptMatch = fileTypes[0].match(/\(([^)]+)\)/);
+          if (acceptMatch) {
+            input.accept = acceptMatch[1].replace(/\*/g, '').replace(/;/g, ',');
+          }
+        }
+
+        input.onchange = async (e: any) => {
+          const file = e.target?.files?.[0];
+          if (file) {
+            const buffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(buffer);
+            resolve({ name: file.name, content: uint8Array });
+          } else {
+            resolve(null);
+          }
+        };
+        
+        input.oncancel = () => {
+          resolve(null);
+        };
+
+        input.click();
+      });
+    };
+
+    // Inject the Python API into window.__pyodide_api
+    pyodide.runPython(`
+from can_re.main import Api
+import js
+js.window.__pyodide_api = Api()
+    `);
+
+    const pyodideApi = window.__pyodide_api;
+
+    // Create a Proxy to ensure all calls return Promises and convert to JS objects
+    window.api = new Proxy({}, {
+      get: (_, methodName: string) => {
+        return async (...args: any[]) => {
+          const pythonMethod = pyodideApi[methodName];
+          if (!pythonMethod) {
+            throw new Error(`Method ${methodName} not found on Python API`);
+          }
+          
+          // Call Python method via Pyodide FFI
+          let result;
+          try {
+              result = pythonMethod(...args);
+          } catch (e: any) {
+              console.error(`Error calling Python method ${methodName}:`, e);
+              throw e;
+          }
+          
+          // If the Python method is async, await it
+          if (result && typeof result.then === 'function') {
+              result = await result;
+          }
+          
+          // Convert Pyodide proxies (dicts, lists) to native JS objects
+          if (result && typeof result.toJs === 'function') {
+            return result.toJs({ dict_converter: Object.fromEntries });
+          }
+          return result;
+        };
+      }
+    });
+
     mode = 'web';
   }
 };
 
 export const getApi = (): ApiClient => {
-  if (!instance) {
+  if (!window.api) {
     throw new Error("API not initialized");
   }
-  return instance;
+  return window.api as ApiClient;
 };
 
 export const getMode = () => mode;

@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:py && npm run build:ui",
+    "build": "npm run build:plugins && npm run build:py && npm run build:ui",
     "build:ui": "tsc -b && vite build",
+    "build:plugins": "for d in ../plugins/*/frontend; do if [ -d \"$d\" ]; then (cd \"$d\" && npm run build); fi; done",
     "build:py": "bash ../scripts/build_py.sh",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -18,8 +19,7 @@
     "@mui/material": "^9.2.0",
     "flexlayout-react": "^0.10.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-virtuoso": "^4.18.11"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
