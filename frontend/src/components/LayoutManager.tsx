@@ -12,29 +12,12 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PushPinIcon from '@mui/icons-material/PushPin';
 
 import { Toolbar } from './Toolbar';
-import { LogViewer } from './LogViewer';
-import { SignalDetails } from './SignalDetails';
+import { WorkspaceWizardBanner } from './WorkspaceWizardBanner';
 import { PanelRegistry } from './layout/PanelRegistry';
 import { LayoutProvider } from '../context/LayoutContext';
 
 
 
-// Register default panels
-PanelRegistry.register({
-  id: 'logViewer',
-  name: 'CAN Log',
-  component: LogViewer,
-  defaultZone: 'primary',
-  allowMultiple: false,
-});
-
-PanelRegistry.register({
-  id: 'signalDetails',
-  name: 'Signal Details',
-  component: SignalDetails,
-  defaultZone: 'secondary',
-  allowMultiple: false,
-});
 
 const FlexLayoutStyles = () => {
   const theme = useTheme();
@@ -190,6 +173,7 @@ export const LayoutManager = () => {
     <LayoutProvider model={model}>
       <FlexLayoutStyles />
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
+        <WorkspaceWizardBanner />
         {/* Toolbar area */}
         <Box sx={{ height: 48, flexShrink: 0, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
           <Toolbar />

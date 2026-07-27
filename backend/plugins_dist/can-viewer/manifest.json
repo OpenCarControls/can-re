@@ -1,0 +1,11 @@
+{
+  "id": "org.opencarcontrols.can-viewer",
+  "name": "CAN Viewer",
+  "version": "1.0.0",
+  "description": "Visualizes CAN frames and signals.",
+  "environments": ["desktop", "web"],
+  "entry": {
+    "backend": "backend",
+    "frontend": "frontend/dist/bundle.js"
+  }
+}

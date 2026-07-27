@@ -8,10 +8,8 @@ import json
 import traceback
 from pathlib import Path
 
-import can
-import cantools
-
 from can_re.core import EventBus, ServiceRegistry, StateManager
+from can_re.core.plugins import PluginManager
 
 class Api:
     def __init__(self):
@@ -19,18 +17,26 @@ class Api:
         self.services = ServiceRegistry()
         self.state = StateManager(self.events)
         
-        self.dbc = None
         self.is_maximized = False
+        self.plugin_manager = PluginManager(self)
+        self.plugin_manager.discover_and_load_builtin_plugins()
+        
+        # Load local desktop plugins if in desktop mode
+        if sys.platform != 'emscripten':
+            plugins_dir = Path.home() / ".can-re" / "plugins"
+            plugins_dir.mkdir(parents=True, exist_ok=True)
+            self.plugin_manager.discover_local_plugins(plugins_dir)
+
         if sys.platform == 'emscripten':
             self.request_file = self._request_file_async
-            self.load_dbc = self._load_dbc_async
-            self.load_log = self._load_log_async
             self.call_service = self._call_service_async
+
+    def get_active_plugins(self):
+        return self.plugin_manager.get_active_plugins()
+
+    def get_plugin_bundle(self, plugin_id: str):
+        return self.plugin_manager.get_plugin_bundle(plugin_id)
             
-        # Temporarily register services until we extract features to plugins
-        self.services.register('core.load_log', self.load_log)
-        self.services.register('core.load_dbc', self.load_dbc)
-        self.services.register('core.get_log_chunk', self.get_log_chunk)
 
     def call_service(self, service_name: str, *args):
         return self.services.call(service_name, *args)
@@ -78,6 +84,8 @@ class Api:
             return None
 
     def set_settings(self, namespace: str, data: dict):
+        if hasattr(data, "to_py"):
+            data = data.to_py()
         if sys.platform == 'emscripten':
             import js
             try:
@@ -133,126 +141,6 @@ class Api:
             traceback.print_exc()
         return None, None
 
-    def load_dbc(self):
-        try:
-            name, path = self.request_file(file_types=('DBC Files (*.dbc)', 'All files (*.*)'))
-            if path:
-                self.dbc = cantools.database.load_file(path)
-                return {"success": True, "file": name, "messages_count": len(self.dbc.messages)}
-            return {"cancelled": True}
-        except Exception as e:
-            traceback.print_exc()
-            return {"error": str(e)}
-
-    async def _load_dbc_async(self):
-        try:
-            name, path = await self._request_file_async(file_types=('DBC Files (*.dbc)', 'All files (*.*)'))
-            if path:
-                self.dbc = cantools.database.load_file(path)
-                return {"success": True, "file": name, "messages_count": len(self.dbc.messages)}
-            return {"cancelled": True}
-        except Exception as e:
-            traceback.print_exc()
-            return {"error": str(e)}
-
-    def _parse_log_file(self, file_path: str):
-        try:
-            reader = can.LogReader(file_path)
-            return list(reader)
-        except ValueError as e:
-            if "too many values to unpack" in str(e) and file_path.lower().endswith('.csv'):
-                # Fallback for SavvyCAN Generic CSV
-                messages = []
-                import csv
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    reader = csv.reader(f)
-                    header = next(reader, None)
-                    if header and header[0] == 'Time Stamp':
-                        for row in reader:
-                            if len(row) < 6:
-                                continue
-                            dlc = int(row[5])
-                            data = [int(x, 16) for x in row[6:6+dlc]]
-                            msg = can.Message(
-                                timestamp=float(row[0]) / 1000000.0,
-                                arbitration_id=int(row[1], 16),
-                                is_extended_id=(row[2].lower() == 'true'),
-                                is_rx=(row[3].lower() == 'rx'),
-                                channel=row[4],
-                                dlc=dlc,
-                                data=data
-                            )
-                            messages.append(msg)
-                        return messages
-            raise e
-
-    def load_log(self):
-        try:
-            name, path = self.request_file(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
-            if path:
-                frames = self._parse_log_file(path)
-                self.state.clear()
-                self.state.add_frames(frames)
-                return {"success": True, "file": name, "total_count": len(self.state.frames)}
-            return {"cancelled": True}
-        except Exception as e:
-            traceback.print_exc()
-            return {"error": str(e)}
-
-    async def _load_log_async(self):
-        try:
-            name, path = await self._request_file_async(file_types=('CAN Logs (*.asc;*.blf;*.csv;*.trc)', 'All files (*.*)'))
-            if path:
-                frames = self._parse_log_file(path)
-                self.state.clear()
-                self.state.add_frames(frames)
-                return {"success": True, "file": name, "total_count": len(self.state.frames)}
-            return {"cancelled": True}
-        except Exception as e:
-            traceback.print_exc()
-            return {"error": str(e)}
-
-    def get_log_chunk(self, start: int, length: int, reverse: bool = False):
-        try:
-            total = len(self.state.frames)
-            if total == 0:
-                return []
-            
-            if reverse:
-                end_idx = total - start
-                start_idx = max(0, end_idx - length)
-                slice_msgs = self.state.frames[start_idx:end_idx]
-                slice_msgs = slice_msgs[::-1]
-            else:
-                slice_msgs = self.state.frames[start:start + length]
-            
-            result = []
-            for msg in slice_msgs:
-                msg_dict = {
-                    "timestamp": msg.timestamp,
-                    "id": msg.arbitration_id,
-                    "dlc": msg.dlc,
-                    "data": list(msg.data),
-                    "is_extended_id": msg.is_extended_id,
-                    "decoded": None
-                }
-                
-                if self.dbc:
-                    try:
-                        decoded = self.dbc.decode_message(msg.arbitration_id, msg.data)
-                        message_def = self.dbc.get_message_by_frame_id(msg.arbitration_id)
-                        msg_dict["decoded"] = {
-                            "name": message_def.name,
-                            "signals": decoded
-                        }
-                    except Exception:
-                        pass # Decode failed (not in DBC or malformed)
-                
-                result.append(msg_dict)
-            return result
-        except Exception as e:
-            traceback.print_exc()
-            return []
 
 def get_entrypoint():
     if "CAN_RE_DIST_PATH" in os.environ:

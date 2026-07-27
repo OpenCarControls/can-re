@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:py && npm run build:ui",
+    "build": "npm run build:plugins && npm run build:py && npm run build:ui",
     "build:ui": "tsc -b && vite build",
+    "build:plugins": "for d in ../plugins/*/frontend; do if [ -d \"$d\" ]; then (cd \"$d\" && npm run build); fi; done",
     "build:py": "bash ../scripts/build_py.sh",
     "lint": "oxlint",
     "preview": "vite preview"

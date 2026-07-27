@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CircularProgress, Box, Typography } from '@mui/material'
 import { initApi } from './api'
-import { LayoutManager } from './components/LayoutManager'
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { loadActivePlugins } from './pluginLoader'
+import { LayoutManager } from './components/LayoutManager'
 
 declare global {
   interface Window {
@@ -49,7 +50,12 @@ function App() {
   const [status, setStatus] = useState<string>('Initializing...')
   const [isReady, setIsReady] = useState<boolean>(false)
 
+  const isInitializing = useRef(false);
+
   useEffect(() => {
+    if (isInitializing.current) return;
+    isInitializing.current = true;
+
     fetch('./version.json')
       .then(res => res.json())
       .then(data => {
@@ -60,9 +66,10 @@ function App() {
       });
 
     const init = async () => {
-      // Check for PyWebView (Desktop Mode)
       if (window.pywebview) {
         initApi(window.pywebview, null);
+        setStatus('Loading plugins...')
+        await loadActivePlugins()
         setStatus('Connected to Python Backend (Desktop Mode)')
         setIsReady(true)
         return;
@@ -81,6 +88,9 @@ function App() {
           await micropip.install(wheelsList);
           
           initApi(null, loadedPyodide);
+          
+          setStatus('Loading plugins...')
+          await loadActivePlugins()
           
           setStatus('Pyodide Loaded! (Web Mode)')
           setIsReady(true)
