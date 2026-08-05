@@ -1,1 +1,1 @@
-{"root":["./src/index.tsx"],"version":"5.9.3"}
+{"root":["./src/DbcEditorModal.tsx","./src/FullEditor.tsx","./src/LiteEditor.tsx","./src/MessageDetails.tsx","./src/MessagesColumn.tsx","./src/NodesColumn.tsx","./src/SignalBitGrid.tsx","./src/index.tsx"],"version":"6.0.3"}

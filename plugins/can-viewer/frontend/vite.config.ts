@@ -16,16 +16,18 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       // Make sure to externalize deps that shouldn't be bundled
-      external: ['react', 'react-dom', 'react/jsx-runtime', '@mui/material', '@emotion/react', '@emotion/styled', 'flexlayout-react', '@mui/icons-material'],
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled', 'flexlayout-react'],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
+          'react-dom/client': 'ReactDOMClient',
           'react/jsx-runtime': 'ReactJsxRuntime',
           '@mui/material': 'MuiMaterial',
+          '@mui/icons-material': 'MuiIconsMaterial',
           '@emotion/react': 'EmotionReact',
           '@emotion/styled': 'EmotionStyled',
-          'flexlayout-react': 'FlexLayout',
+          'flexlayout-react': 'FlexLayout'
         }
       }
     }

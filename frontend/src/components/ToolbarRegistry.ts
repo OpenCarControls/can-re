@@ -21,6 +21,11 @@ class ToolbarRegistryImpl {
         window.dispatchEvent(new CustomEvent('toolbarUpdated'));
     }
 
+    unregister(id: string) {
+        this.actions = this.actions.filter(a => a.id !== id);
+        window.dispatchEvent(new CustomEvent('toolbarUpdated'));
+    }
+
     getActions() {
         return [...this.actions].sort((a, b) => {
             if (a.group !== b.group) return a.group.localeCompare(b.group);

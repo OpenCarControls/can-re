@@ -19,6 +19,7 @@ export async function loadActivePlugins() {
                     corePlugin.setup({ 
                         registerPanel: PanelRegistry.register.bind(PanelRegistry), 
                         registerToolbarAction: (window as any).ToolbarRegistry.register.bind((window as any).ToolbarRegistry),
+                        unregisterToolbarAction: (window as any).ToolbarRegistry.unregister.bind((window as any).ToolbarRegistry),
                         api 
                     });
                     console.log(`Successfully loaded frontend for plugin ${pluginInfo.name}`);
@@ -37,8 +38,10 @@ export async function loadActivePlugins() {
                 const requireFn = (id: string) => {
                     if (id === 'react') return (window as any).React;
                     if (id === 'react-dom') return (window as any).ReactDOM;
+                    if (id === 'react-dom/client') return (window as any).ReactDOMClient;
                     if (id === 'react/jsx-runtime') return (window as any).ReactJsxRuntime;
                     if (id === '@mui/material') return (window as any).MuiMaterial;
+                    if (id === '@mui/icons-material') return (window as any).MuiIconsMaterial;
                     if (id === '@emotion/react') return (window as any).EmotionReact;
                     if (id === '@emotion/styled') return (window as any).EmotionStyled;
                     if (id === 'flexlayout-react') return (window as any).FlexLayout;
@@ -54,6 +57,7 @@ export async function loadActivePlugins() {
                     pluginModule.setup({ 
                         registerPanel: PanelRegistry.register.bind(PanelRegistry),
                         registerToolbarAction: (window as any).ToolbarRegistry.register.bind((window as any).ToolbarRegistry),
+                        unregisterToolbarAction: (window as any).ToolbarRegistry.unregister.bind((window as any).ToolbarRegistry),
                         api 
                     });
                     console.log(`Successfully loaded frontend for plugin ${pluginInfo.name}`);

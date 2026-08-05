@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Divider } from '@mui/material';
+import { Box, Typography, Divider, Button } from '@mui/material';
+import { Edit as EditIcon } from '@mui/icons-material';
 
 export const FrameDetails = () => {
   const [frame, setFrame] = useState<any>(null);
@@ -27,7 +28,18 @@ export const FrameDetails = () => {
 
 
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: 'background.paper' }}>
+    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: 'background.paper', position: 'relative' }}>
+      <Button 
+        variant="outlined" 
+        size="small" 
+        startIcon={<EditIcon />} 
+        sx={{ position: 'absolute', top: 16, right: 16 }}
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('openDbcLiteEditor', { detail: { frameId: frame.id, dlc: frame.dlc } }));
+        }}
+      >
+        Edit DBC
+      </Button>
 
       {signals || (frame.decoded && typeof frame.decoded === 'string') ? (
         <Box sx={{ mb: 3 }}>
